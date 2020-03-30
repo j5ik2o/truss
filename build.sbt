@@ -1,9 +1,35 @@
 val akkaVersion = "2.6.4"
 
 val baseSettings =
-  Seq(name := "truss", version := "1.0.0-SNAPSHOT", scalaVersion := "2.13.1")
+  Seq(
+    organization := "truss",
+    name := "truss",
+    version := "1.0.0-SNAPSHOT",
+    scalaVersion := "2.13.1",
+    scalacOptions ++=
+      Seq(
+        "-feature",
+        "-deprecation",
+        "-unchecked",
+        "-encoding",
+        "UTF-8",
+        "-language:_",
+        "-target:jvm-1.8"
+      )
+  )
 
 val baseDir = "server"
+
+// ---
+
+val `grpc-protocol` = (project in file("grpc-protocol"))
+  .settings(baseSettings)
+  .settings(name := "truss-grpc-protocol")
+  .settings(
+    PB.targets in Compile := Seq(
+        scalapb.gen() -> (sourceManaged in Compile).value
+      )
+  )
 
 // --- contracts
 
