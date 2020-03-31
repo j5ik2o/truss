@@ -27,18 +27,20 @@ object WalletPersistentAggregate {
 
   private def commandHandler(id: Id[Wallet]): (State, WalletCommand) => Effect[Event, State] = { (state, command) =>
     (command, state) match {
-      case (CreateWallet(_, name, deposit, _, replyTo), EmptyState) =>
-        val now = Instant.now()
-        create(id, name, deposit, replyTo, now)
-      case (GetBalance(_, id, replyTo), JustState(state)) if id == state.id =>
-        replyTo ! GetBalanceResult(state.balance)
+      case (GetName(_, id, replyTo), JustState(state)) if id == state.id =>
+        replyTo ! GetNameResult(ULID(), id, state.name)
         Effect.none
+      case (GetBalance(_, id, replyTo), JustState(state)) if id == state.id =>
+        replyTo ! GetBalanceResult(ULID(), id, state.balance)
+        Effect.none
+      case (CreateWallet(_, name, deposit, _, replyTo), EmptyState) =>
+        create(id, name, deposit, replyTo, Instant.now())
       case (DepositWallet(_, id, value, _, replyTo), JustState(state)) if id == state.id =>
-        val now = Instant.now()
-        deposit(id, value, replyTo, state, now)
+        deposit(id, value, replyTo, state, Instant.now())
       case (WithdrawWallet(_, id, value, _, replyTo), JustState(state)) if id == state.id =>
-        val now = Instant.now()
-        withdraw(id, value, replyTo, state, now)
+        withdraw(id, value, replyTo, state, Instant.now())
+      case (RenameWallet(_, id, value, _, replyTo), JustState(state)) if id == state.id =>
+        rename(id, value, replyTo, Instant.now())
       case _ =>
         Effect.none
     }
@@ -48,12 +50,31 @@ object WalletPersistentAggregate {
     (event, state) match {
       case (WalletCreated(_, id, name, deposit, _), EmptyState) =>
         JustState(new Wallet(id, name, deposit, Instant.now, Instant.now))
-      case (WalletDeposited(_, id, value, _), JustState(state)) if (id == state.id) =>
+      case (WalletDeposited(_, id, value, _), JustState(state)) if id == state.id =>
         state.deposit(value).fold(error => throw new IllegalStateException(error.message), JustState)
-      case (WalletWithdrew(_, id, value, _), JustState(state)) if (id == state.id) =>
+      case (WalletWithdrew(_, id, value, _), JustState(state)) if id == state.id =>
         state.withdraw(value).fold(error => throw new IllegalStateException(error.message), JustState)
+      case (WalletRenamed(_, id, value, _), JustState(state)) if id == state.id =>
+        state.rename(value).fold(error => throw new IllegalArgumentException(error.message), JustState)
       case _ =>
         state
+    }
+  }
+
+  private def create(
+      id: Id[Wallet],
+      name: WalletName,
+      deposit: Money,
+      replyTo: ActorRef[CreateWalletResult],
+      now: Instant
+  ): ReplyEffect[WalletCreated, State] = {
+    Wallet(id, name, deposit, now, now) match {
+      case Right(_) =>
+        Effect.persist(WalletCreated(ULID(), id, name, deposit, now)).thenReply(replyTo) { _ =>
+          CreateWalletSucceeded(ULID(), id, now)
+        }
+      case Left(error) =>
+        Effect.reply(replyTo)(CreateWalletFailed(ULID(), id, error.message, now))
     }
   }
 
@@ -67,7 +88,7 @@ object WalletPersistentAggregate {
     state.canWithdraw(value) match {
       case Right(_) =>
         Effect.persist(WalletWithdrew(ULID(), id, value, now)).thenReply(replyTo) { _ =>
-          WithdrawWalletSucceeded(ULID(), id, Instant.now())
+          WithdrawWalletSucceeded(ULID(), id, now)
         }
       case Left(error) =>
         Effect.reply(replyTo)(WithdrawWalletFailed(ULID(), id, error.message, now))
@@ -84,27 +105,21 @@ object WalletPersistentAggregate {
     state.canDeposit(value) match {
       case Right(_) =>
         Effect.persist(WalletDeposited(ULID(), id, value, now)).thenReply(replyTo) { _ =>
-          DepositWalletSucceeded(ULID(), id, Instant.now())
+          DepositWalletSucceeded(ULID(), id, now)
         }
       case Left(error) =>
         Effect.reply(replyTo)(DepositWalletFailed(ULID(), id, error.message, now))
     }
   }
 
-  private def create(
+  private def rename(
       id: Id[Wallet],
-      name: WalletName,
-      deposit: Money,
-      replyTo: ActorRef[CreateWalletResult],
+      value: WalletName,
+      replyTo: ActorRef[RenameWalletResult],
       now: Instant
-  ): ReplyEffect[WalletCreated, State] = {
-    Wallet(id, name, deposit, now, now) match {
-      case Right(_) =>
-        Effect.persist(WalletCreated(ULID(), id, name, deposit, now)).thenReply(replyTo) { _ =>
-          CreateWalletSucceeded(ULID(), id, Instant.now)
-        }
-      case Left(error) =>
-        Effect.reply(replyTo)(CreateWalletFailed(ULID(), id, error.message, now))
+  ): ReplyEffect[WalletRenamed, State] = {
+    Effect.persist(WalletRenamed(ULID(), id, value, now)).thenReply(replyTo) { _ =>
+      RenameWalletSucceeded(ULID(), id, now)
     }
   }
 

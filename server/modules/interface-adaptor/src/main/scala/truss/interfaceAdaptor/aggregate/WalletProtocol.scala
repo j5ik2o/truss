@@ -22,15 +22,28 @@ object WalletProtocol {
   ) extends WalletCommand {
     override type R = CreateWalletResult
   }
-  sealed trait CreateWalletResult extends CommandReply
-  final case class CreateWalletSucceeded(id: ULID, bankAccountId: Id[Wallet], creatAt: Instant)
+  sealed trait CreateWalletResult                                                          extends CommandReply
+  final case class CreateWalletSucceeded(id: ULID, walletId: Id[Wallet], creatAt: Instant) extends CreateWalletResult
+  final case class CreateWalletFailed(id: ULID, walletId: Id[Wallet], message: String, creatAt: Instant)
       extends CreateWalletResult
-  final case class CreateWalletFailed(id: ULID, bankAccountId: Id[Wallet], message: String, creatAt: Instant)
-      extends CreateWalletResult
+
+  final case class RenameWallet(
+      id: ULID,
+      walletId: Id[Wallet],
+      name: WalletName,
+      updateAt: Instant,
+      replyTo: ActorRef[RenameWalletResult]
+  ) extends WalletCommand {
+    override type R = RenameWalletResult
+  }
+  sealed trait RenameWalletResult                                                            extends CommandReply
+  final case class RenameWalletSucceeded(id: ULID, walletId: Id[Wallet], updatedAt: Instant) extends RenameWalletResult
+  final case class RenameWalletFailed(id: ULID, walletId: Id[Wallet], message: String, updatedAt: Instant)
+      extends RenameWalletResult
 
   final case class DepositWallet(
       id: ULID,
-      bankAccountId: Id[Wallet],
+      walletId: Id[Wallet],
       value: Money,
       updateAt: Instant,
       replyTo: ActorRef[DepositWalletResult]
@@ -38,18 +51,18 @@ object WalletProtocol {
     override type R = DepositWalletResult
   }
   sealed trait DepositWalletResult extends CommandReply
-  final case class DepositWalletSucceeded(id: ULID, bankAccountId: Id[Wallet], updatedAt: Instant)
+  final case class DepositWalletSucceeded(id: ULID, walletId: Id[Wallet], updatedAt: Instant)
       extends DepositWalletResult
   final case class DepositWalletFailed(
       id: ULID,
-      bankAccountId: Id[Wallet],
+      walletId: Id[Wallet],
       message: String,
       updatedAt: Instant
   ) extends DepositWalletResult
 
   final case class WithdrawWallet(
       id: ULID,
-      bankAccountId: Id[Wallet],
+      walletId: Id[Wallet],
       value: Money,
       updateAt: Instant,
       replyTo: ActorRef[WithdrawWalletResult]
@@ -57,32 +70,38 @@ object WalletProtocol {
     override type R = WithdrawWalletResult
   }
   sealed trait WithdrawWalletResult extends CommandReply
-  final case class WithdrawWalletSucceeded(id: ULID, bankAccountId: Id[Wallet], updatedAt: Instant)
+  final case class WithdrawWalletSucceeded(id: ULID, walletId: Id[Wallet], updatedAt: Instant)
       extends WithdrawWalletResult
   final case class WithdrawWalletFailed(
       id: ULID,
-      bankAccountId: Id[Wallet],
+      walletId: Id[Wallet],
       message: String,
       updatedAt: Instant
   ) extends WithdrawWalletResult
 
-  final case class GetBalance(id: ULID, bankAccountId: Id[Wallet], replyTo: ActorRef[GetBalanceResult])
+  final case class GetName(id: ULID, walletId: Id[Wallet], replyTo: ActorRef[GetNameResult]) extends WalletCommand {
+    override type R = GetNameResult
+  }
+  final case class GetNameResult(id: ULID, walletId: Id[Wallet], name: WalletName) extends CommandReply
+  final case class GetBalance(id: ULID, walletId: Id[Wallet], replyTo: ActorRef[GetBalanceResult])
       extends WalletCommand {
     override type R = GetBalanceResult
   }
 
-  final case class GetBalanceResult(balance: Money) extends CommandReply
+  final case class GetBalanceResult(id: ULID, walletId: Id[Wallet], balance: Money) extends CommandReply
+
   // ---
 
   sealed trait Event
   case class WalletCreated(
       id: ULID,
-      bankAccountId: Id[Wallet],
+      walletId: Id[Wallet],
       name: WalletName,
       deposit: Money,
       createdAt: Instant
   ) extends Event
-  case class WalletDeposited(id: ULID, bankAccountId: Id[Wallet], value: Money, updatedAt: Instant) extends Event
-  case class WalletWithdrew(id: ULID, bankAccountId: Id[Wallet], value: Money, updatedAt: Instant)  extends Event
+  case class WalletDeposited(id: ULID, walletId: Id[Wallet], value: Money, updatedAt: Instant)    extends Event
+  case class WalletWithdrew(id: ULID, walletId: Id[Wallet], value: Money, updatedAt: Instant)     extends Event
+  case class WalletRenamed(id: ULID, walletId: Id[Wallet], value: WalletName, updatedAt: Instant) extends Event
 
 }

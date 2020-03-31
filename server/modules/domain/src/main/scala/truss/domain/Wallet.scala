@@ -9,6 +9,7 @@ sealed trait WalletError {
 }
 case class WalletDepositError(id: Id[Wallet], message: String)  extends WalletError
 case class WalletWithdrawError(id: Id[Wallet], message: String) extends WalletError
+case class WalletRenameError(id: Id[Wallet], message: String)   extends WalletError
 
 object Wallet {
   def apply(
@@ -53,5 +54,8 @@ case class Wallet(
   def withdraw(money: Money): Either[WalletError, Wallet] = {
     canWithdraw(money).map { _ => copy(balance = this.balance - money) }
   }
+
+  def rename(value: WalletName): Either[WalletRenameError, Wallet] =
+    Right(copy(name = value))
 
 }

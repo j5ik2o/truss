@@ -23,7 +23,8 @@ val baseSettings =
         "org.slf4j"        % "slf4j-api"             % "1.7.30",
         "de.huxhorn.sulky" % "de.huxhorn.sulky.ulid" % "8.2.0",
         "org.scalatest"    %% "scalatest"            % "3.1.1" % Test
-      )
+      ),
+    scalafmtOnCompile := true
   )
 
 val baseDir = "server"
