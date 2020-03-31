@@ -9,6 +9,7 @@ import truss.domain.money.Money
 import truss.domain.{ Id, Wallet, WalletId, WalletName }
 import truss.infrastructure.ulid.ULID
 import truss.interfaceAdaptor.aggregate.WalletProtocol._
+import truss.interfaceAdaptor.aggregate.WalletEvents._
 
 object WalletPersistentAggregate {
 

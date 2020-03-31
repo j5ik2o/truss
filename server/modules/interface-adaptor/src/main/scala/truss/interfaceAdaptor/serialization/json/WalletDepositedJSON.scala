@@ -6,7 +6,7 @@ import java.util.Currency
 import truss.domain.WalletId
 import truss.domain.money.Money
 import truss.infrastructure.ulid.ULID
-import truss.interfaceAdaptor.aggregate.WalletProtocol.WalletDeposited
+import truss.interfaceAdaptor.aggregate.WalletEvents.WalletDeposited
 import truss.interfaceAdaptor.serialization.DomainObjToJsonReprIso
 
 case class WalletDepositedJSON(id: String, walletId: String, value: BigDecimal, currency: String, updatedAt: Long)

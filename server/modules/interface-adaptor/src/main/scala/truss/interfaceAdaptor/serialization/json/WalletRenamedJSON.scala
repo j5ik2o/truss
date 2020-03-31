@@ -4,7 +4,7 @@ import java.time.Instant
 
 import truss.domain.{ WalletId, WalletName }
 import truss.infrastructure.ulid.ULID
-import truss.interfaceAdaptor.aggregate.WalletProtocol.WalletRenamed
+import truss.interfaceAdaptor.aggregate.WalletEvents.WalletRenamed
 import truss.interfaceAdaptor.serialization.DomainObjToJsonReprIso
 
 case class WalletRenamedJSON(id: String, walletId: String, name: String, updatedAt: Long)

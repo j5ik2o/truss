@@ -3,7 +3,7 @@ package truss.interfaceAdaptor.serialization
 import akka.actor.ExtendedActorSystem
 import akka.event.{ Logging, LoggingAdapter }
 import akka.serialization.SerializerWithStringManifest
-import truss.interfaceAdaptor.aggregate.WalletProtocol.{ WalletCreated, WalletDeposited, WalletRenamed, WalletWithdrew }
+import truss.interfaceAdaptor.aggregate.WalletEvents.{ WalletCreated, WalletDeposited, WalletRenamed, WalletWithdrew }
 import truss.interfaceAdaptor.serialization.json.{
   WalletCreatedJSON,
   WalletDepositedJSON,

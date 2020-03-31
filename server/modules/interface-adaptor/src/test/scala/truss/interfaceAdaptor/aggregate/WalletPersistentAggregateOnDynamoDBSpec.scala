@@ -42,6 +42,7 @@ class WalletPersistentAggregateOnDynamoDBSpec
     with BeforeAndAfterAll
     with LogCapturing
     with DynamoDBSpecSupport {
+
   override protected lazy val dynamoDBPort: Int = WalletPersistentAggregateOnDynamoDBSpec.dynamoDBPort
 
   val underlying: JavaDynamoDbAsyncClient = JavaDynamoDbAsyncClient
@@ -60,8 +61,8 @@ class WalletPersistentAggregateOnDynamoDBSpec
   }
 
   protected override def afterAll(): Unit = {
-    super.afterAll()
     deleteTable
+    super.afterAll()
   }
 
 }

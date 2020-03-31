@@ -1,6 +1,6 @@
 package truss.interfaceAdaptor.aggregate
 
-import akka.actor.testkit.typed.scaladsl.{ LogCapturing, ScalaTestWithActorTestKit }
+import akka.actor.testkit.typed.scaladsl.LogCapturing
 import com.typesafe.config.ConfigFactory
 import net.manub.embeddedkafka.{ EmbeddedKafka, EmbeddedKafkaConfig }
 import org.scalatest.BeforeAndAfterAll

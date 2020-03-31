@@ -6,7 +6,7 @@ import java.util.Currency
 import truss.domain.WalletId
 import truss.domain.money.Money
 import truss.infrastructure.ulid.ULID
-import truss.interfaceAdaptor.aggregate.WalletProtocol.WalletWithdrew
+import truss.interfaceAdaptor.aggregate.WalletEvents.WalletWithdrew
 import truss.interfaceAdaptor.serialization.DomainObjToJsonReprIso
 
 case class WalletWithdrewJSON(id: String, walletId: String, value: BigDecimal, currency: String, updatedAt: Long)
