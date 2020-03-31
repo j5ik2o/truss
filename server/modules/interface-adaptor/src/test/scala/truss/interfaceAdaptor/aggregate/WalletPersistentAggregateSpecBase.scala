@@ -27,13 +27,18 @@ abstract class WalletPersistentAggregateSpecBase(config: Config)
       val createWalletSucceeded = createWalletResultProbe.expectMessageType[CreateWalletSucceeded]
       createWalletSucceeded.walletId shouldBe walletId1
 
+      val depositWalletResultProbe = createTestProbe[DepositWalletResult]
+      wallet1 ! DepositWallet(ULID(), walletId1, Money.yens(100), Instant.now, depositWalletResultProbe.ref)
+      val depositWalletSucceeded = depositWalletResultProbe.expectMessageType[DepositWalletSucceeded]
+      depositWalletSucceeded.walletId shouldBe walletId1
+
       killActors(wallet1)
 
       val getBalanceResultProbe = createTestProbe[GetBalanceResult]()
       val rebootWallet1         = spawn(WalletPersistentAggregate(walletId1))
       rebootWallet1 ! GetBalance(ULID(), walletId1, getBalanceResultProbe.ref)
       val getBalanceResult = getBalanceResultProbe.expectMessageType[GetBalanceResult]
-      getBalanceResult.balance shouldBe Money.yens(100)
+      getBalanceResult.balance shouldBe Money.yens(200)
     }
   }
 }
