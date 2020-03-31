@@ -10,8 +10,17 @@ import truss.infrastructure.ulid.ULID
 object WalletProtocol {
 
   sealed trait CommandReply
-
   sealed trait WalletCommand {
+    def walletId: WalletId
+  }
+  case object Stop extends WalletCommand {
+    override def walletId: WalletId = throw new NoSuchElementException
+  }
+  case object Idle extends WalletCommand {
+    override def walletId: WalletId = throw new NoSuchElementException
+  }
+
+  sealed trait WalletCommandWithReply extends WalletCommand {
     type R <: CommandReply
 
     def replyTo: ActorRef[R]
@@ -24,7 +33,7 @@ object WalletProtocol {
       deposit: Money,
       creatAt: Instant,
       replyTo: ActorRef[CreateWalletResult]
-  ) extends WalletCommand {
+  ) extends WalletCommandWithReply {
     override type R = CreateWalletResult
   }
 
@@ -41,7 +50,7 @@ object WalletProtocol {
       name: WalletName,
       updateAt: Instant,
       replyTo: ActorRef[RenameWalletResult]
-  ) extends WalletCommand {
+  ) extends WalletCommandWithReply {
     override type R = RenameWalletResult
   }
 
@@ -58,7 +67,7 @@ object WalletProtocol {
       value: Money,
       updateAt: Instant,
       replyTo: ActorRef[DepositWalletResult]
-  ) extends WalletCommand {
+  ) extends WalletCommandWithReply {
     override type R = DepositWalletResult
   }
 
@@ -79,7 +88,7 @@ object WalletProtocol {
       value: Money,
       updateAt: Instant,
       replyTo: ActorRef[WithdrawWalletResult]
-  ) extends WalletCommand {
+  ) extends WalletCommandWithReply {
     override type R = WithdrawWalletResult
   }
 
@@ -95,32 +104,18 @@ object WalletProtocol {
       updatedAt: Instant
   ) extends WithdrawWalletResult
 
-  final case class GetName(id: ULID, walletId: WalletId, replyTo: ActorRef[GetNameResult]) extends WalletCommand {
+  final case class GetName(id: ULID, walletId: WalletId, replyTo: ActorRef[GetNameResult])
+      extends WalletCommandWithReply {
     override type R = GetNameResult
   }
 
   final case class GetNameResult(id: ULID, walletId: WalletId, name: WalletName) extends CommandReply
 
-  final case class GetBalance(id: ULID, walletId: WalletId, replyTo: ActorRef[GetBalanceResult]) extends WalletCommand {
+  final case class GetBalance(id: ULID, walletId: WalletId, replyTo: ActorRef[GetBalanceResult])
+      extends WalletCommandWithReply {
     override type R = GetBalanceResult
   }
 
   final case class GetBalanceResult(id: ULID, walletId: WalletId, balance: Money) extends CommandReply
-
-}
-
-object WalletEvents {
-
-  sealed trait Event
-  case class WalletCreated(
-      id: ULID,
-      walletId: WalletId,
-      name: WalletName,
-      deposit: Money,
-      createdAt: Instant
-  ) extends Event
-  case class WalletRenamed(id: ULID, walletId: WalletId, value: WalletName, updatedAt: Instant) extends Event
-  case class WalletDeposited(id: ULID, walletId: WalletId, value: Money, updatedAt: Instant)    extends Event
-  case class WalletWithdrew(id: ULID, walletId: WalletId, value: Money, updatedAt: Instant)     extends Event
 
 }

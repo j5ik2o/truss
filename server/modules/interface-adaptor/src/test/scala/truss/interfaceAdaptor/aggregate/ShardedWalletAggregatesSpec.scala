@@ -15,7 +15,7 @@ import truss.infrastructure.ulid.ULID
 import truss.interfaceAdaptor.aggregate.WalletProtocol.{ CreateWalletFailed, CreateWalletSucceeded }
 import truss.interfaceAdaptor.utils.TypedActorSpecSupport
 
-class ShardedWalletAggregateSpec
+class ShardedWalletAggregatesSpec
     extends ScalaTestWithActorTestKit(s"""
                                                                        |akka.actor.provider = cluster
                                                                        |akka.persistence.journal.plugin = "akka.persistence.journal.inmem"
@@ -38,11 +38,13 @@ class ShardedWalletAggregateSpec
       eventually {
         cluster.selfMember.status shouldEqual MemberStatus.Up
       }
-      val shardedAggregate = new ShardedWalletAggregate(typedSystem)
+      implicit val sch     = system.scheduler
+      val shardedAggregate = new ShardedWalletAggregates(typedSystem)
+      val async            = shardedAggregate.ofAsync { (b, _) => spawn(b) }
       val walletId         = WalletId(ULID())
 
       val createResult =
-        shardedAggregate.create(walletId, WalletName("test-1"), Money.yens(100)).futureValue
+        async.create(ULID(), walletId, WalletName("test-1"), Money.yens(100)).futureValue
 
       createResult match {
         case CreateWalletSucceeded(_, _walletId, creatAt) =>
@@ -52,7 +54,7 @@ class ShardedWalletAggregateSpec
       }
 
       val balanceResult =
-        shardedAggregate.getBalance(walletId).futureValue
+        async.getBalance(ULID(), walletId).futureValue
       balanceResult.balance shouldBe Money.yens(100)
 
     }
