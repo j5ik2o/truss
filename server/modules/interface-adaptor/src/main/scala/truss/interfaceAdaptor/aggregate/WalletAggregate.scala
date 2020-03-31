@@ -15,7 +15,7 @@ object WalletAggregate {
 
   private def initialize(id: Id[Wallet]): Behavior[WalletCommand] = Behaviors.receive { (_, message) =>
     message match {
-      case CreateWallet(_, name, deposit, _, replyTo) =>
+      case CreateWallet(_, _id, name, deposit, _, replyTo) if id == _id =>
         create(id, name, deposit, Instant.now(), replyTo)
       case _ =>
         Behaviors.ignore

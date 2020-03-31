@@ -15,6 +15,7 @@ object WalletProtocol {
   }
   final case class CreateWallet(
       id: ULID,
+      walletId: Id[Wallet],
       name: WalletName,
       deposit: Money,
       creatAt: Instant,

@@ -24,7 +24,7 @@ class WalletAggregateSpec extends AnyFreeSpec with BeforeAndAfterAll with Matche
       val now       = Instant.now()
 
       val createWalletResultProbe = testKit.createTestProbe[CreateWalletResult]()
-      wallet1 ! CreateWallet(ULID(), WalletName("test-1"), Money.yens(100), now, createWalletResultProbe.ref)
+      wallet1 ! CreateWallet(ULID(), walletId1, WalletName("test-1"), Money.yens(100), now, createWalletResultProbe.ref)
       val createWalletSucceeded = createWalletResultProbe.expectMessageType[CreateWalletSucceeded]
       createWalletSucceeded.walletId shouldBe walletId1
 
@@ -49,7 +49,7 @@ class WalletAggregateSpec extends AnyFreeSpec with BeforeAndAfterAll with Matche
       val now       = Instant.now()
 
       val createWalletResultProbe = testKit.createTestProbe[CreateWalletResult]()
-      wallet1 ! CreateWallet(ULID(), WalletName("test-1"), Money.yens(100), now, createWalletResultProbe.ref)
+      wallet1 ! CreateWallet(ULID(), walletId1, WalletName("test-1"), Money.yens(100), now, createWalletResultProbe.ref)
       val createWalletSucceeded = createWalletResultProbe.expectMessageType[CreateWalletSucceeded]
       createWalletSucceeded.walletId shouldBe walletId1
 
@@ -76,7 +76,7 @@ class WalletAggregateSpec extends AnyFreeSpec with BeforeAndAfterAll with Matche
       val now       = Instant.now()
 
       val createWalletResultProbe = testKit.createTestProbe[CreateWalletResult]()
-      wallet1 ! CreateWallet(ULID(), WalletName("test-1"), Money.yens(100), now, createWalletResultProbe.ref)
+      wallet1 ! CreateWallet(ULID(), walletId1, WalletName("test-1"), Money.yens(100), now, createWalletResultProbe.ref)
       val createWalletSucceeded = createWalletResultProbe.expectMessageType[CreateWalletSucceeded]
       createWalletSucceeded.walletId shouldBe walletId1
 

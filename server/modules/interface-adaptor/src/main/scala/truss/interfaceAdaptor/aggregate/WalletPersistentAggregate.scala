@@ -33,7 +33,7 @@ object WalletPersistentAggregate {
       case (GetBalance(_, id, replyTo), JustState(state)) if id == state.id =>
         replyTo ! GetBalanceResult(ULID(), id, state.balance)
         Effect.none
-      case (CreateWallet(_, name, deposit, _, replyTo), EmptyState) =>
+      case (CreateWallet(_, _id, name, deposit, _, replyTo), EmptyState) if id == _id =>
         create(id, name, deposit, replyTo, Instant.now())
       case (DepositWallet(_, id, value, _, replyTo), JustState(state)) if id == state.id =>
         deposit(id, value, replyTo, state, Instant.now())
