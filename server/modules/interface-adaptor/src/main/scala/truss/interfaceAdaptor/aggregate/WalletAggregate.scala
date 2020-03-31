@@ -5,15 +5,15 @@ import java.time.Instant
 import akka.actor.typed.{ ActorRef, Behavior }
 import akka.actor.typed.scaladsl.Behaviors
 import truss.domain.money.Money
-import truss.domain.{ Id, Wallet, WalletName }
+import truss.domain.{ Id, Wallet, WalletId, WalletName }
 import truss.infrastructure.ulid.ULID
 import truss.interfaceAdaptor.aggregate.WalletProtocol._
 
 object WalletAggregate {
 
-  def apply(id: Id[Wallet]): Behavior[WalletCommand] = initialize(id)
+  def apply(id: WalletId): Behavior[WalletCommand] = initialize(id)
 
-  private def initialize(id: Id[Wallet]): Behavior[WalletCommand] = Behaviors.receive { (_, message) =>
+  private def initialize(id: WalletId): Behavior[WalletCommand] = Behaviors.receive { (_, message) =>
     message match {
       case CreateWallet(_, _id, name, deposit, _, replyTo) if id == _id =>
         create(id, name, deposit, Instant.now(), replyTo)
@@ -42,7 +42,7 @@ object WalletAggregate {
   }
 
   private def create(
-      id: Id[Wallet],
+      id: WalletId,
       name: WalletName,
       deposit: Money,
       now: Instant,
@@ -60,7 +60,7 @@ object WalletAggregate {
 
   private def withdraw(
       wallet: Wallet,
-      walletId: Id[Wallet],
+      walletId: WalletId,
       value: Money,
       now: Instant,
       replyTo: ActorRef[WithdrawWalletResult]
@@ -77,7 +77,7 @@ object WalletAggregate {
 
   private def deposit(
       wallet: Wallet,
-      walletId: Id[Wallet],
+      walletId: WalletId,
       value: Money,
       now: Instant,
       replyTo: ActorRef[DepositWalletResult]
@@ -94,7 +94,7 @@ object WalletAggregate {
 
   private def rename(
       wallet: Wallet,
-      walletId: Id[Wallet],
+      walletId: WalletId,
       value: WalletName,
       now: Instant,
       replyTo: ActorRef[RenameWalletResult]

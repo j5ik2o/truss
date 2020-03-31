@@ -7,7 +7,7 @@ import org.scalatest.BeforeAndAfterAll
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers
 import truss.domain.money.Money
-import truss.domain.{ Id, Wallet, WalletName }
+import truss.domain.{ WalletId, WalletName }
 import truss.infrastructure.ulid.ULID
 import truss.interfaceAdaptor.aggregate.WalletProtocol._
 
@@ -19,7 +19,7 @@ class WalletAggregateSpec extends AnyFreeSpec with BeforeAndAfterAll with Matche
 
   "WalletAggregate" - {
     "rename" in {
-      val walletId1 = Id(classOf[Wallet], ULID())
+      val walletId1 = WalletId(ULID())
       val wallet1   = testKit.spawn(WalletAggregate(walletId1))
       val now       = Instant.now()
 
@@ -44,7 +44,7 @@ class WalletAggregateSpec extends AnyFreeSpec with BeforeAndAfterAll with Matche
       getNameResult2.name shouldBe WalletName("test-2")
     }
     "deposit" in {
-      val walletId1 = Id(classOf[Wallet], ULID())
+      val walletId1 = WalletId(ULID())
       val wallet1   = testKit.spawn(WalletAggregate(walletId1))
       val now       = Instant.now()
 
@@ -71,7 +71,7 @@ class WalletAggregateSpec extends AnyFreeSpec with BeforeAndAfterAll with Matche
       getBalanceResult2.balance shouldBe Money.yens(200)
     }
     "withdraw" in {
-      val walletId1 = Id(classOf[Wallet], ULID())
+      val walletId1 = WalletId(ULID())
       val wallet1   = testKit.spawn(WalletAggregate(walletId1))
       val now       = Instant.now()
 

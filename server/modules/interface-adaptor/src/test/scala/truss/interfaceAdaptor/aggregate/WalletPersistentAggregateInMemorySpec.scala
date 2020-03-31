@@ -5,29 +5,12 @@ import java.util.UUID
 
 import akka.actor.testkit.typed.scaladsl.{ LogCapturing, ScalaTestWithActorTestKit }
 import org.scalatest.freespec.AnyFreeSpecLike
+import truss.domain.{ WalletId, WalletName }
 import truss.domain.money.Money
-import truss.domain.{ Id, Wallet, WalletName }
 import truss.infrastructure.ulid.ULID
-import truss.interfaceAdaptor.aggregate.WalletProtocol.{
-  CreateWallet,
-  CreateWalletResult,
-  CreateWalletSucceeded,
-  DepositWallet,
-  DepositWalletResult,
-  DepositWalletSucceeded,
-  GetBalance,
-  GetBalanceResult,
-  GetName,
-  GetNameResult,
-  RenameWallet,
-  RenameWalletResult,
-  RenameWalletSucceeded,
-  WithdrawWallet,
-  WithdrawWalletResult,
-  WithdrawWalletSucceeded
-}
+import truss.interfaceAdaptor.aggregate.WalletProtocol._
 
-class WalletPersistentAggregateSpec extends ScalaTestWithActorTestKit(s"""
+class WalletPersistentAggregateInMemorySpec extends ScalaTestWithActorTestKit(s"""
       akka.persistence.journal.plugin = "akka.persistence.journal.inmem"
       akka.persistence.snapshot-store.plugin = "akka.persistence.snapshot-store.local"
       akka.persistence.snapshot-store.local.dir = "target/snapshot-${UUID.randomUUID().toString}"
@@ -35,7 +18,7 @@ class WalletPersistentAggregateSpec extends ScalaTestWithActorTestKit(s"""
   "WalletPersistent" - {
 
     "rename" in {
-      val walletId1               = Id(classOf[Wallet], ULID())
+      val walletId1               = WalletId(ULID())
       val wallet1                 = spawn(WalletPersistentAggregate(walletId1))
       val now                     = Instant.now()
       val createWalletResultProbe = createTestProbe[CreateWalletResult]()
@@ -60,7 +43,7 @@ class WalletPersistentAggregateSpec extends ScalaTestWithActorTestKit(s"""
     }
 
     "deposit" in {
-      val walletId1               = Id(classOf[Wallet], ULID())
+      val walletId1               = WalletId(ULID())
       val wallet1                 = spawn(WalletPersistentAggregate(walletId1))
       val now                     = Instant.now()
       val createWalletResultProbe = createTestProbe[CreateWalletResult]()
@@ -87,7 +70,7 @@ class WalletPersistentAggregateSpec extends ScalaTestWithActorTestKit(s"""
     }
 
     "withdraw" in {
-      val walletId1               = Id(classOf[Wallet], ULID())
+      val walletId1               = WalletId(ULID())
       val wallet1                 = spawn(WalletPersistentAggregate(walletId1))
       val now                     = Instant.now()
       val createWalletResultProbe = createTestProbe[CreateWalletResult]()

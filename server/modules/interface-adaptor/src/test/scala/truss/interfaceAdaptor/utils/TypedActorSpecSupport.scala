@@ -1,4 +1,4 @@
-package truss.interfaceAdaptor.aggregate
+package truss.interfaceAdaptor.utils
 
 import akka.actor.testkit.typed.scaladsl.ActorTestKit
 import akka.actor.typed.ActorRef

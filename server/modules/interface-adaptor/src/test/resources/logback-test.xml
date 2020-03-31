@@ -10,15 +10,17 @@
         </encoder>
     </appender>
 
-    <logger name="truss" level="INFO" />
+    <logger name="truss" level="DEBUG" />
 
     <appender name="CapturingAppender" class="akka.actor.testkit.typed.internal.CapturingAppender"/>
+
     <logger name="akka.actor.testkit.typed.internal.CapturingAppenderDelegate" >
         <appender-ref ref="console"/>
     </logger>
 
     <root level="DEBUG">
         <appender-ref ref="CapturingAppender"/>
+        <appender-ref ref="console"/>
     </root>
 
 </configuration>

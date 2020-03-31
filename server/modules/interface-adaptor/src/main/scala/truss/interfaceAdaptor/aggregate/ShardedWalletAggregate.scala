@@ -10,7 +10,7 @@ import akka.cluster.sharding.typed.ShardingEnvelope
 import akka.cluster.sharding.typed.scaladsl.{ ClusterSharding, Entity, EntityTypeKey }
 import akka.util.Timeout
 import truss.domain.money.Money
-import truss.domain.{ Id, Wallet, WalletName }
+import truss.domain.{ Id, Wallet, WalletId, WalletName }
 import truss.infrastructure.ulid.ULID
 import truss.interfaceAdaptor.aggregate.WalletProtocol._
 
@@ -25,32 +25,32 @@ class ShardedWalletAggregate(system: ActorSystem[_]) {
 
   val shardRegion: ActorRef[ShardingEnvelope[WalletCommand]] =
     sharding.init(Entity(TypeKey) { entityContext =>
-      WalletPersistentAggregate(Id(classOf[Wallet], ULID.parseFromString(entityContext.entityId).get))
+      WalletPersistentAggregate(WalletId(ULID.parseFromString(entityContext.entityId).get))
     })
 
   implicit val timeout: Timeout = 3.seconds
 
-  def create(id: Id[Wallet], name: WalletName, deposit: Money): Future[CreateWalletResult] = {
+  def create(id: WalletId, name: WalletName, deposit: Money): Future[CreateWalletResult] = {
     val entityRef = sharding.entityRefFor(TypeKey, id.value.asString)
     entityRef.ask[CreateWalletResult](ref => CreateWallet(ULID(), id, name, deposit, Instant.now(), ref))
   }
 
-  def rename(id: Id[Wallet], name: WalletName): Future[RenameWalletResult] = {
+  def rename(id: WalletId, name: WalletName): Future[RenameWalletResult] = {
     val entityRef = sharding.entityRefFor(TypeKey, id.value.asString)
     entityRef.ask[RenameWalletResult](ref => RenameWallet(ULID(), id, name, Instant.now(), ref))
   }
 
-  def deposit(id: Id[Wallet], value: Money): Future[DepositWalletResult] = {
+  def deposit(id: WalletId, value: Money): Future[DepositWalletResult] = {
     val entityRef = sharding.entityRefFor(TypeKey, id.value.asString)
     entityRef.ask[DepositWalletResult](ref => DepositWallet(ULID(), id, value, Instant.now(), ref))
   }
 
-  def withdraw(id: Id[Wallet], value: Money): Future[WithdrawWalletResult] = {
+  def withdraw(id: WalletId, value: Money): Future[WithdrawWalletResult] = {
     val entityRef = sharding.entityRefFor(TypeKey, id.value.asString)
     entityRef.ask[WithdrawWalletResult](ref => WithdrawWallet(ULID(), id, value, Instant.now(), ref))
   }
 
-  def getBalance(id: Id[Wallet]): Future[GetBalanceResult] = {
+  def getBalance(id: WalletId): Future[GetBalanceResult] = {
     val entityRef = sharding.entityRefFor(TypeKey, id.value.asString)
     entityRef.ask[GetBalanceResult](ref => GetBalance(ULID(), id, ref))
   }

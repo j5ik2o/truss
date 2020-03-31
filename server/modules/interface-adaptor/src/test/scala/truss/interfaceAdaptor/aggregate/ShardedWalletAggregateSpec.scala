@@ -2,7 +2,7 @@ package truss.interfaceAdaptor.aggregate
 
 import java.util.UUID
 
-import akka.actor.testkit.typed.scaladsl.{ LogCapturing, ScalaTestWithActorTestKit, TestProbe }
+import akka.actor.testkit.typed.scaladsl.{ LogCapturing, ScalaTestWithActorTestKit }
 import akka.actor.typed.ActorSystem
 import akka.cluster.MemberStatus
 import akka.cluster.sharding.typed.scaladsl.ClusterSharding
@@ -10,9 +10,10 @@ import akka.cluster.typed.{ Cluster, Join }
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.freespec.AnyFreeSpecLike
 import truss.domain.money.Money
-import truss.domain.{ Id, Wallet, WalletName }
+import truss.domain.{ WalletId, WalletName }
 import truss.infrastructure.ulid.ULID
 import truss.interfaceAdaptor.aggregate.WalletProtocol.{ CreateWalletFailed, CreateWalletSucceeded }
+import truss.interfaceAdaptor.utils.TypedActorSpecSupport
 
 class ShardedWalletAggregateSpec
     extends ScalaTestWithActorTestKit(s"""
@@ -38,7 +39,7 @@ class ShardedWalletAggregateSpec
         cluster.selfMember.status shouldEqual MemberStatus.Up
       }
       val shardedAggregate = new ShardedWalletAggregate(typedSystem)
-      val walletId         = Id(classOf[Wallet], ULID())
+      val walletId         = WalletId(ULID())
 
       val createResult =
         shardedAggregate.create(walletId, WalletName("test-1"), Money.yens(100)).futureValue

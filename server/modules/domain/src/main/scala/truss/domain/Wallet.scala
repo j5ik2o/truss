@@ -3,17 +3,19 @@ package truss.domain
 import java.time.Instant
 
 import truss.domain.money.Money
+import truss.infrastructure.ulid.ULID
 
 sealed trait WalletError {
   def message: String
 }
-case class WalletDepositError(id: Id[Wallet], message: String)  extends WalletError
-case class WalletWithdrawError(id: Id[Wallet], message: String) extends WalletError
-case class WalletRenameError(id: Id[Wallet], message: String)   extends WalletError
+case class WalletDepositError(id: WalletId, message: String)  extends WalletError
+case class WalletWithdrawError(id: WalletId, message: String) extends WalletError
+case class WalletRenameError(id: WalletId, message: String)   extends WalletError
+final case class WalletId(override val value: ULID)           extends Id(classOf[Wallet].getName, value)
 
 object Wallet {
   def apply(
-      id: Id[Wallet],
+      id: WalletId,
       name: WalletName,
       balance: Money,
       createAt: Instant,
@@ -29,7 +31,7 @@ object Wallet {
 }
 
 case class Wallet(
-    id: Id[Wallet],
+    id: WalletId,
     name: WalletName,
     balance: Money,
     createAt: Instant,

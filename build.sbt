@@ -2,8 +2,9 @@ val akkaVersion           = "2.6.4"
 val alpakkaKafkaVersion   = "2.0.2+4-30f1536b"
 val akkaManagementVersion = "1.0.5"
 val AkkaHttpVersion       = "10.1.11"
-val KafkaVersion          = "2.4.0"
+val kafkaVersion          = "2.4.0"
 val logbackVersion        = "1.2.3"
+val circeVersion          = "0.12.3"
 
 val baseSettings =
   Seq(
@@ -23,7 +24,9 @@ val baseSettings =
       ),
     resolvers ++= Seq(
         "Akka Snapshots" at "https://repo.akka.io/snapshots",
-        Resolver.bintrayRepo("akka", "snapshots")
+        Resolver.bintrayRepo("akka", "snapshots"),
+        "Seasar Repository" at "https://maven.seasar.org/maven2/",
+        "DynamoDB Local Repository" at "https://s3-ap-northeast-1.amazonaws.com/dynamodb-local-tokyo/release"
       ),
     libraryDependencies ++= Seq(
         "org.scala-lang"   % "scala-reflect"         % scalaVersion.value,
@@ -107,6 +110,9 @@ val `interface-adaptor` =
     .settings(
       name := "truss-interface-adaptor",
       libraryDependencies ++= Seq(
+          "io.circe"                      %% "circe-core"                         % circeVersion,
+          "io.circe"                      %% "circe-generic"                      % circeVersion,
+          "io.circe"                      %% "circe-parser"                       % circeVersion,
           "com.typesafe.akka"             %% "akka-stream-kafka"                  % alpakkaKafkaVersion,
           "com.typesafe.akka"             %% "akka-stream-kafka-cluster-sharding" % alpakkaKafkaVersion,
           "com.typesafe.akka"             %% "akka-discovery"                     % akkaVersion,
@@ -114,12 +120,18 @@ val `interface-adaptor` =
           "com.typesafe.akka"             %% "akka-cluster-typed"                 % akkaVersion,
           "com.typesafe.akka"             %% "akka-cluster-sharding-typed"        % akkaVersion,
           "com.typesafe.akka"             %% "akka-persistence-typed"             % akkaVersion,
+          "com.typesafe.akka"             %% "akka-serialization-jackson"         % akkaVersion,
           "com.lightbend.akka.management" %% "akka-management"                    % akkaManagementVersion,
           "com.lightbend.akka.management" %% "akka-management-cluster-http"       % akkaManagementVersion,
+          "com.github.j5ik2o"             %% "akka-persistence-dynamodb"          % "1.0.21",
+          "com.github.j5ik2o"             %% "reactive-aws-dynamodb-test"         % "1.2.1",
+          "com.github.j5ik2o"             %% "akka-persistence-kafka"             % "1.0.5",
           "ch.qos.logback"                % "logback-classic"                     % logbackVersion % Test,
           "com.typesafe.akka"             %% "akka-testkit"                       % akkaVersion % Test,
           "com.typesafe.akka"             %% "akka-actor-testkit-typed"           % akkaVersion % Test,
-          "com.typesafe.akka"             %% "akka-stream-testkit"                % akkaVersion % Test
+          "com.typesafe.akka"             %% "akka-stream-testkit"                % akkaVersion % Test,
+          "io.github.embeddedkafka"       %% "embedded-kafka"                     % kafkaVersion % Test,
+          "org.slf4j"                     % "jul-to-slf4j"                        % "1.7.30" % Test
         )
     )
     .dependsOn(`contract-interface-adaptor`, infrastructure, `use-case`)

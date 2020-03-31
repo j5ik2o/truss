@@ -6,7 +6,7 @@ import akka.actor.typed.{ ActorRef, Behavior }
 import akka.persistence.typed.PersistenceId
 import akka.persistence.typed.scaladsl.{ Effect, EventSourcedBehavior, ReplyEffect }
 import truss.domain.money.Money
-import truss.domain.{ Id, Wallet, WalletName }
+import truss.domain.{ Id, Wallet, WalletId, WalletName }
 import truss.infrastructure.ulid.ULID
 import truss.interfaceAdaptor.aggregate.WalletProtocol._
 
@@ -16,16 +16,16 @@ object WalletPersistentAggregate {
   final case class JustState(value: Wallet) extends State
   final case object EmptyState              extends State
 
-  def apply(id: Id[Wallet]): Behavior[WalletCommand] = {
+  def apply(id: WalletId): Behavior[WalletCommand] = {
     EventSourcedBehavior[WalletCommand, Event, State](
-      persistenceId = PersistenceId.of(id.model, id.value.asString),
+      persistenceId = PersistenceId.of(id.modelName, id.value.asString, "-"),
       emptyState = EmptyState,
       commandHandler = commandHandler(id),
       eventHandler = eventHandler
     )
   }
 
-  private def commandHandler(id: Id[Wallet]): (State, WalletCommand) => Effect[Event, State] = { (state, command) =>
+  private def commandHandler(id: WalletId): (State, WalletCommand) => Effect[Event, State] = { (state, command) =>
     (command, state) match {
       case (GetName(_, id, replyTo), JustState(state)) if id == state.id =>
         replyTo ! GetNameResult(ULID(), id, state.name)
@@ -62,7 +62,7 @@ object WalletPersistentAggregate {
   }
 
   private def create(
-      id: Id[Wallet],
+      id: WalletId,
       name: WalletName,
       deposit: Money,
       replyTo: ActorRef[CreateWalletResult],
@@ -79,7 +79,7 @@ object WalletPersistentAggregate {
   }
 
   private def withdraw(
-      id: Id[Wallet],
+      id: WalletId,
       value: Money,
       replyTo: ActorRef[WithdrawWalletResult],
       state: Wallet,
@@ -96,7 +96,7 @@ object WalletPersistentAggregate {
   }
 
   private def deposit(
-      id: Id[Wallet],
+      id: WalletId,
       value: Money,
       replyTo: ActorRef[DepositWalletResult],
       state: Wallet,
@@ -113,7 +113,7 @@ object WalletPersistentAggregate {
   }
 
   private def rename(
-      id: Id[Wallet],
+      id: WalletId,
       value: WalletName,
       replyTo: ActorRef[RenameWalletResult],
       now: Instant
