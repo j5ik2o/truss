@@ -1,3 +1,5 @@
+import scalapb.compiler.Version.{ grpcJavaVersion, protobufVersion, scalapbVersion }
+
 val akkaVersion           = "2.6.4"
 val alpakkaKafkaVersion   = "2.0.2+4-30f1536b"
 val akkaManagementVersion = "1.0.5"
@@ -41,7 +43,7 @@ val baseSettings =
     scalafmtOnCompile := true,
     parallelExecution in Test := false
   )
-import scalapb.compiler.Version.{ grpcJavaVersion, protobufVersion, scalapbVersion }
+
 val baseDir = "server"
 // ---
 
@@ -63,31 +65,6 @@ val `grpc-protocol` = (project in file("grpc-protocol"))
     PB.protoSources in Compile += (baseDirectory in LocalRootProject).value / "protobuf"
   )
 
-// --- contracts
-
-val `contract-interface-adaptor` =
-  (project in file(s"$baseDir/contracts/interface-adaptor"))
-    .settings(baseSettings)
-    .settings(
-      name := "truss-contract-interface",
-      libraryDependencies ++= Seq(
-          "com.typesafe.akka" %% "akka-slf4j"  % akkaVersion,
-          "com.typesafe.akka" %% "akka-stream" % akkaVersion
-        )
-    )
-
-val `contract-use-case` =
-  (project in file(s"$baseDir/contracts/use-case"))
-    .settings(baseSettings)
-    .settings(
-      name := "truss-contract-use-case",
-      libraryDependencies ++= Seq(
-          "com.typesafe.akka" %% "akka-stream" % akkaVersion
-        )
-    )
-
-// --- modules
-
 val infrastructure =
   (project in file(s"$baseDir/modules/infrastructure"))
     .settings(baseSettings)
@@ -103,29 +80,97 @@ val domain = (project in file(s"$baseDir/modules/domain"))
   .settings(name := "truss-domain")
   .dependsOn(infrastructure)
 
+// --- contracts
+
+val `contract-interface-adaptor-command` =
+  (project in file(s"$baseDir/contracts/interface-adaptor-command"))
+    .enablePlugins(AkkaGrpcPlugin)
+    .settings(baseSettings)
+    .settings(
+      name := "truss-contract-interface-command",
+      libraryDependencies ++= Seq(
+          "com.typesafe.akka" %% "akka-actor-typed" % akkaVersion,
+          "com.typesafe.akka" %% "akka-slf4j"       % akkaVersion,
+          "com.typesafe.akka" %% "akka-stream"      % akkaVersion
+        ),
+      PB.protoSources in Compile += (baseDirectory in LocalRootProject).value / "protobuf" / "command"
+    )
+    .dependsOn(domain)
+
+val `contract-interface-adaptor-query` =
+  (project in file(s"$baseDir/contracts/interface-adaptor-query"))
+    .enablePlugins(AkkaGrpcPlugin)
+    .settings(baseSettings)
+    .settings(
+      name := "truss-contract-interface-query",
+      libraryDependencies ++= Seq(
+          "com.typesafe.akka" %% "akka-slf4j"  % akkaVersion,
+          "com.typesafe.akka" %% "akka-stream" % akkaVersion
+        ),
+      PB.protoSources in Compile += (baseDirectory in LocalRootProject).value / "protobuf" / "query"
+    )
+
+val `contract-use-case` =
+  (project in file(s"$baseDir/contracts/use-case"))
+    .settings(baseSettings)
+    .settings(
+      name := "truss-contract-use-case",
+      libraryDependencies ++= Seq(
+          "com.typesafe.akka" %% "akka-stream"      % akkaVersion,
+          "com.typesafe.akka" %% "akka-actor-typed" % akkaVersion
+        )
+    )
+    .dependsOn(domain)
+
+// --- modules
+
 val `use-case` =
   (project in file(s"$baseDir/modules/use-case"))
     .settings(baseSettings)
     .settings(
       name := "truss-use-case",
       libraryDependencies ++= Seq(
+          "com.typesafe.akka" %% "akka-actor-typed"    % akkaVersion,
           "ch.qos.logback"    % "logback-classic"      % logbackVersion % Test,
-          "com.typesafe.akka" %% "akka-testkit"        % akkaVersion    % Test,
-          "com.typesafe.akka" %% "akka-stream-testkit" % akkaVersion    % Test
+          "com.typesafe.akka" %% "akka-testkit"        % akkaVersion % Test,
+          "com.typesafe.akka" %% "akka-stream-testkit" % akkaVersion % Test
         )
     )
-    .dependsOn(`contract-use-case`, infrastructure, domain)
+    .dependsOn(`contract-use-case`, `contract-interface-adaptor-command`, infrastructure, domain)
 
-val `interface-adaptor` =
-  (project in file(s"$baseDir/modules/interface-adaptor"))
-    .enablePlugins(AkkaGrpcPlugin)
+val `interface-adaptor-common` = (project in file(s"$baseDir/modules/interface-adaptor-common"))
+  .settings(baseSettings)
+  .settings(
+    name := "truss-interface-adaptor-common",
+    libraryDependencies ++= Seq(
+        "io.circe"             %% "circe-core"      % circeVersion,
+        "io.circe"             %% "circe-generic"   % circeVersion,
+        "io.circe"             %% "circe-parser"    % circeVersion,
+        "com.typesafe.akka"    %% "akka-http"       % "10.1.11",
+        "de.heikoseeberger"    %% "akka-http-circe" % "1.31.0",
+        "com.thesamet.scalapb" %% "scalapb-runtime" % scalapbVersion,
+        "com.thesamet.scalapb" %% "scalapb-runtime" % scalapbVersion % "protobuf"
+      )
+  )
+
+val `interface-adaptor-query` =
+  (project in file(s"$baseDir/modules/interface-adaptor-query"))
     .settings(baseSettings)
     .settings(
-      name := "truss-interface-adaptor",
+      name := "truss-interface-adaptor-query",
       libraryDependencies ++= Seq(
-          "io.circe"                      %% "circe-core"                         % circeVersion,
-          "io.circe"                      %% "circe-generic"                      % circeVersion,
-          "io.circe"                      %% "circe-parser"                       % circeVersion,
+          "com.github.ghostdogpr" %% "caliban"           % "0.7.3",
+          "com.github.ghostdogpr" %% "caliban-akka-http" % "0.7.3"
+        )
+    )
+    .dependsOn(`contract-interface-adaptor-query`, `interface-adaptor-common`, infrastructure)
+
+val `interface-adaptor-command` =
+  (project in file(s"$baseDir/modules/interface-adaptor-command"))
+    .settings(baseSettings)
+    .settings(
+      name := "truss-interface-adaptor-command",
+      libraryDependencies ++= Seq(
           "com.typesafe.akka"             %% "akka-stream-kafka"                  % alpakkaKafkaVersion,
           "com.typesafe.akka"             %% "akka-stream-kafka-cluster-sharding" % alpakkaKafkaVersion,
           "com.typesafe.akka"             %% "akka-discovery"                     % akkaVersion,
@@ -134,24 +179,24 @@ val `interface-adaptor` =
           "com.typesafe.akka"             %% "akka-cluster-sharding-typed"        % akkaVersion,
           "com.typesafe.akka"             %% "akka-persistence-typed"             % akkaVersion,
           "com.typesafe.akka"             %% "akka-serialization-jackson"         % akkaVersion,
-          "com.lightbend.akka.management" %% "akka-management"                    % akkaManagementVersion,
-          "com.lightbend.akka.management" %% "akka-management-cluster-http"       % akkaManagementVersion,
+          "ch.megard"                     %% "akka-http-cors"                     % "0.4.2",
           "com.github.j5ik2o"             %% "akka-persistence-dynamodb"          % "1.0.21",
           "com.github.j5ik2o"             %% "akka-persistence-kafka"             % "1.0.6",
           "com.github.j5ik2o"             %% "akka-persistence-s3"                % "1.0.4",
+          "com.lightbend.akka.management" %% "akka-management"                    % akkaManagementVersion,
+          "com.lightbend.akka.management" %% "akka-management-cluster-http"       % akkaManagementVersion,
           "com.github.j5ik2o"             %% "reactive-aws-dynamodb-test"         % "1.2.1" % Test,
-          "com.thesamet.scalapb"          %% "scalapb-runtime"                    % scalapbVersion,
-          "com.thesamet.scalapb"          %% "scalapb-runtime"                    % scalapbVersion % "protobuf",
           "ch.qos.logback"                % "logback-classic"                     % logbackVersion % Test,
           "com.typesafe.akka"             %% "akka-testkit"                       % akkaVersion % Test,
           "com.typesafe.akka"             %% "akka-actor-testkit-typed"           % akkaVersion % Test,
           "com.typesafe.akka"             %% "akka-stream-testkit"                % akkaVersion % Test,
           "io.github.embeddedkafka"       %% "embedded-kafka"                     % kafkaVersion % Test,
+          "com.whisk"                     %% "docker-testkit-scalatest"           % "0.9.9" % Test,
+          "com.whisk"                     %% "docker-testkit-impl-spotify"        % "0.9.9" % Test,
           "org.slf4j"                     % "jul-to-slf4j"                        % "1.7.30" % Test
-        ),
-      PB.protoSources in Compile += (baseDirectory in LocalRootProject).value / "protobuf"
+        )
     )
-    .dependsOn(`contract-interface-adaptor`, infrastructure, `use-case`)
+    .dependsOn(`contract-interface-adaptor-command`, `interface-adaptor-common`, infrastructure, `use-case`)
 
 // ---- bootstrap
 
@@ -163,7 +208,7 @@ val `api-server` = (project in file(s"$baseDir/bootstrap/api-server"))
         "ch.qos.logback" % "logback-classic" % "1.2.3"
       )
   )
-  .dependsOn(`interface-adaptor`, infrastructure)
+  .dependsOn(`interface-adaptor-command`, `interface-adaptor-query`, infrastructure)
 
 val root = (project in file("."))
   .settings(baseSettings)
@@ -171,7 +216,8 @@ val root = (project in file("."))
   .aggregate(
     `api-server`,
     infrastructure,
-    `interface-adaptor`,
+    `interface-adaptor-command`,
+    `interface-adaptor-query`,
     `use-case`,
     domain,
     `grpc-protocol`
