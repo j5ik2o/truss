@@ -3,12 +3,15 @@ package truss.interfaceAdaptor.aggregate
 import java.net.URI
 
 import akka.actor.testkit.typed.scaladsl.LogCapturing
+import akka.actor.typed.ActorRef
 import com.github.j5ik2o.reactive.aws.dynamodb.DynamoDbAsyncClient
 import com.typesafe.config.ConfigFactory
 import org.scalatest.BeforeAndAfterAll
 import software.amazon.awssdk.auth.credentials.{ AwsBasicCredentials, StaticCredentialsProvider }
 import software.amazon.awssdk.services.dynamodb.{ DynamoDbAsyncClient => JavaDynamoDbAsyncClient }
 import truss.interfaceAdaptor.utils.{ DynamoDBSpecSupport, RandomPortUtil }
+
+import scala.concurrent.duration.{ Duration, FiniteDuration }
 object WalletPersistentAggregateOnDynamoDBSpec {
   val dynamoDBPort = RandomPortUtil.temporaryServerPort()
 }
@@ -65,4 +68,5 @@ class WalletPersistentAggregateOnDynamoDBSpec
     super.afterAll()
   }
 
+  override def killActor(actor: ActorRef[Nothing], max: FiniteDuration): Unit = testKit.stop(actor, max)
 }

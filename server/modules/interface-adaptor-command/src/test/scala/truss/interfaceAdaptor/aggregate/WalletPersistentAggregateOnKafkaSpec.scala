@@ -1,10 +1,13 @@
 package truss.interfaceAdaptor.aggregate
 
 import akka.actor.testkit.typed.scaladsl.LogCapturing
+import akka.actor.typed.ActorRef
 import com.typesafe.config.ConfigFactory
 import net.manub.embeddedkafka.{ EmbeddedKafka, EmbeddedKafkaConfig }
 import org.scalatest.BeforeAndAfterAll
 import truss.interfaceAdaptor.utils.S3SpecSupport
+
+import scala.concurrent.duration.{ Duration, FiniteDuration }
 
 class WalletPersistentAggregateOnKafkaSpec
     extends WalletPersistentAggregateSpecBase(
@@ -52,4 +55,5 @@ class WalletPersistentAggregateOnKafkaSpec
     super.afterAll()
   }
 
+  override def killActor(actor: ActorRef[Nothing], max: FiniteDuration): Unit = testKit.stop(actor, max)
 }

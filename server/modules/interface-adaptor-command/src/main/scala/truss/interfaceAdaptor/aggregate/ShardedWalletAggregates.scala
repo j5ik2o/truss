@@ -8,16 +8,32 @@ import truss.interfaceAdaptor.aggregate.WalletProtocol._
 
 import scala.concurrent.duration._
 
-class ShardedWalletAggregates(system: ActorSystem[_], receiveTimeout: FiniteDuration = 3 seconds) {
+object ShardedWalletAggregates {
 
   val TypeKey: EntityTypeKey[WalletCommand] = EntityTypeKey[WalletCommand]("Wallet")
+
+}
+
+object ShardedWalletAggregatesProxy {
+
+  def behavior(sharding: ClusterSharding): Behavior[WalletCommand] = Behaviors.setup { ctx =>
+    Behaviors.receiveMessage[WalletCommand] { msg =>
+      val entityRef = sharding.entityRefFor[WalletCommand](ShardedWalletAggregates.TypeKey, msg.walletId.value.asString)
+      entityRef ! msg
+      Behaviors.same
+    }
+  }
+
+}
+
+class ShardedWalletAggregates(system: ActorSystem[_], receiveTimeout: FiniteDuration = 3 seconds) {
 
   private def behavior(
       receiveTimeout: FiniteDuration
   ): EntityContext[WalletCommand] => Behavior[WalletCommand] = { entityContext =>
     Behaviors.setup[WalletCommand] { ctx =>
       val childRef = ctx.spawn(
-        WalletAggregates.behavior(_.value.asString)(v => WalletPersistentAggregate(v)),
+        WalletAggregates.behavior(_.value.asString)(id => WalletPersistentAggregate(id)),
         name = WalletAggregates.name
       )
       ctx.setReceiveTimeout(receiveTimeout, Idle)
@@ -34,24 +50,11 @@ class ShardedWalletAggregates(system: ActorSystem[_], receiveTimeout: FiniteDura
     }
   }
 
-  private val sharding = ClusterSharding(system)
+  val sharding = ClusterSharding(system)
 
-  val shardRegion: ActorRef[ShardingEnvelope[WalletCommand]] = sharding.init(
-    Entity(typeKey = TypeKey)(createBehavior = behavior(receiveTimeout))
+  def initShardRegion: ActorRef[ShardingEnvelope[WalletCommand]] = sharding.init(
+    Entity(typeKey = ShardedWalletAggregates.TypeKey)(createBehavior = behavior(receiveTimeout))
       .withStopMessage(Stop)
   )
-
-  def ofProxy: Behavior[WalletCommand] = Behaviors.receiveMessage[WalletCommand] { msg =>
-    shardRegion ! ShardingEnvelope(msg.walletId.value.asString, msg)
-    Behaviors.same
-  }
-
-  def ofAsync(
-      spawnF: (Behavior[WalletCommand], String) => ActorRef[WalletCommand]
-  ): WalletAggregatesAsyncImpl = {
-    new WalletAggregatesAsyncImpl(
-      spawnF(ofProxy, "sharded-wallet-aggregates-async")
-    )
-  }
 
 }

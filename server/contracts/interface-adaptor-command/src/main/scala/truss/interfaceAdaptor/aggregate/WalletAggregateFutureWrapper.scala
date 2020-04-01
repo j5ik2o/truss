@@ -9,7 +9,7 @@ import truss.interfaceAdaptor.aggregate.WalletProtocol._
 
 import scala.concurrent.Future
 
-trait WalletAggregateAsync {
+trait WalletAggregateFutureWrapper {
 
   def create(id: ULID, walletId: WalletId, name: WalletName, deposit: Money)(
       implicit timeout: Timeout,

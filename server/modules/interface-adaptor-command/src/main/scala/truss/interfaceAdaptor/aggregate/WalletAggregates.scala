@@ -15,8 +15,11 @@ object WalletAggregates {
     Behaviors.setup { ctx =>
       def createAndSend(walletId: WalletId): ActorRef[WalletCommand] = {
         ctx.child(name(walletId)) match {
-          case None      => ctx.spawn(behaviorF(walletId), name = name(walletId))
-          case Some(ref) => ref.asInstanceOf[ActorRef[WalletCommand]]
+          case None =>
+            ctx.log.debug(s"spawn: child = $walletId")
+            ctx.spawn(behaviorF(walletId), name = name(walletId))
+          case Some(ref) =>
+            ref.asInstanceOf[ActorRef[WalletCommand]]
         }
       }
       Behaviors.receiveMessage[WalletCommand] { msg =>

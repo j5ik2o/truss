@@ -1,8 +1,9 @@
+import com.amazonaws.regions.{ Region, Regions }
 import scalapb.compiler.Version.{ grpcJavaVersion, protobufVersion, scalapbVersion }
 
 val akkaVersion           = "2.6.4"
 val alpakkaKafkaVersion   = "2.0.2+4-30f1536b"
-val akkaManagementVersion = "1.0.5"
+val akkaManagementVersion = "1.0.6"
 val AkkaHttpVersion       = "10.1.11"
 val kafkaVersion          = "2.4.0"
 val logbackVersion        = "1.2.3"
@@ -31,18 +32,52 @@ val baseSettings =
         Resolver.bintrayRepo("akka", "snapshots"),
         "Seasar Repository" at "https://maven.seasar.org/maven2/",
         "DynamoDB Local Repository" at "https://s3-ap-northeast-1.amazonaws.com/dynamodb-local-tokyo/release",
-        Resolver.bintrayRepo("beyondthelines", "maven")
+        Resolver.bintrayRepo("beyondthelines", "maven"),
+        Resolver.bintrayRepo("segence", "maven-oss-releases"),
+        Resolver.bintrayRepo("everpeace", "maven"),
+        Resolver.bintrayRepo("tanukkii007", "maven"),
+        Resolver.bintrayRepo("kamon-io", "snapshots")
       ),
     libraryDependencies ++= Seq(
-        "org.scala-lang"   % "scala-reflect"         % scalaVersion.value,
-        "com.iheart"       %% "ficus"                % "1.4.7",
-        "org.slf4j"        % "slf4j-api"             % "1.7.30",
-        "de.huxhorn.sulky" % "de.huxhorn.sulky.ulid" % "8.2.0",
-        "org.scalatest"    %% "scalatest"            % "3.1.1" % Test
+        "org.scala-lang"     % "scala-reflect"         % scalaVersion.value,
+        "com.iheart"         %% "ficus"                % "1.4.7",
+        "org.slf4j"          % "slf4j-api"             % "1.7.30",
+        "de.huxhorn.sulky"   % "de.huxhorn.sulky.ulid" % "8.2.0",
+        "io.monix"           %% "monix"                % "3.1.0",
+        "eu.timepit"         %% "refined"              % "0.9.13",
+        "org.wvlet.airframe" %% "airframe"             % "20.3.3",
+        "org.scalatest"      %% "scalatest"            % "3.1.1" % Test,
+        "org.scalacheck"     %% "scalacheck"           % "1.14.3" % Test
+      ),
+    dependencyOverrides ++= Seq(
+        "com.typesafe.akka" %% "akka-http"            % "10.1.11",
+        "com.typesafe.akka" %% "akka-http-spray-json" % "10.1.11"
       ),
     scalafmtOnCompile := true,
     parallelExecution in Test := false
   )
+
+lazy val dockerCommonSettings = Seq(
+  dockerBaseImage := "adoptopenjdk/openjdk8:x86_64-alpine-jdk8u191-b12",
+  maintainer in Docker := "Junichi Kato <j5ik2o@gmail.com>",
+  dockerUpdateLatest := true,
+  bashScriptExtraDefines ++= Seq(
+      "addJava -Xms${JVM_HEAP_MIN:-1024m}",
+      "addJava -Xmx${JVM_HEAP_MAX:-1024m}",
+      "addJava -XX:MaxMetaspaceSize=${JVM_META_MAX:-512M}",
+      "addJava ${JVM_GC_OPTIONS:--XX:+UseG1GC}",
+      "addJava -Dconfig.resource=${CONFIG_RESOURCE:-application.conf}",
+      "addJava -Dakka.remote.startup-timeout=60s"
+    )
+)
+
+val ecrSettings = Seq(
+  region in Ecr := Region.getRegion(Regions.AP_NORTHEAST_1),
+  repositoryName in Ecr := "j5ik2o/truss-api-server",
+  repositoryTags in Ecr ++= Seq(version.value),
+  localDockerImage in Ecr := "j5ik2o/" + (packageName in Docker).value + ":" + (version in Docker).value,
+  push in Ecr := ((push in Ecr) dependsOn (publishLocal in Docker, login in Ecr)).value
+)
 
 val baseDir = "server"
 // ---
@@ -185,7 +220,10 @@ val `interface-adaptor-command` =
           "com.github.j5ik2o"             %% "akka-persistence-s3"                % "1.0.4",
           "com.lightbend.akka.management" %% "akka-management"                    % akkaManagementVersion,
           "com.lightbend.akka.management" %% "akka-management-cluster-http"       % akkaManagementVersion,
+          "com.lightbend.akka.management" %% "akka-management-cluster-bootstrap"  % akkaManagementVersion,
+          "com.lightbend.akka.discovery"  %% "akka-discovery-kubernetes-api"      % akkaManagementVersion,
           "com.github.j5ik2o"             %% "reactive-aws-dynamodb-test"         % "1.2.1" % Test,
+          "com.typesafe.akka"             %% "akka-multi-node-testkit"            % akkaVersion % Test,
           "ch.qos.logback"                % "logback-classic"                     % logbackVersion % Test,
           "com.typesafe.akka"             %% "akka-testkit"                       % akkaVersion % Test,
           "com.typesafe.akka"             %% "akka-actor-testkit-typed"           % akkaVersion % Test,
@@ -193,7 +231,8 @@ val `interface-adaptor-command` =
           "io.github.embeddedkafka"       %% "embedded-kafka"                     % kafkaVersion % Test,
           "com.whisk"                     %% "docker-testkit-scalatest"           % "0.9.9" % Test,
           "com.whisk"                     %% "docker-testkit-impl-spotify"        % "0.9.9" % Test,
-          "org.slf4j"                     % "jul-to-slf4j"                        % "1.7.30" % Test
+          "org.slf4j"                     % "jul-to-slf4j"                        % "1.7.30" % Test,
+          "org.aspectj"                   % "aspectjweaver"                       % "1.8.13"
         )
     )
     .dependsOn(`contract-interface-adaptor-command`, `interface-adaptor-common`, infrastructure, `use-case`)
@@ -201,11 +240,41 @@ val `interface-adaptor-command` =
 // ---- bootstrap
 
 val `api-server` = (project in file(s"$baseDir/bootstrap/api-server"))
+  .enablePlugins(AshScriptPlugin, JavaAgent, EcrPlugin)
   .settings(baseSettings)
+  .settings(dockerCommonSettings)
+  .settings(ecrSettings)
   .settings(
     name := "truss-api-server",
+    mainClass in (Compile, run) := Some("truss.api.Main"),
+    mainClass in reStart := Some("truss.api.Main"),
+    dockerEntrypoint := Seq("/opt/docker/bin/truss-api-server"),
+    dockerUsername := Some("j5ik2o"),
+    fork in run := true,
+    javaAgents += "org.aspectj"            % "aspectjweaver"    % "1.8.13",
+    javaAgents += "org.mortbay.jetty.alpn" % "jetty-alpn-agent" % "2.0.9" % "runtime;test",
+    javaOptions in Universal += "-Dorg.aspectj.tracing.factory=default",
+    javaOptions in run ++= Seq(
+        s"-Dcom.sun.management.jmxremote.port=${sys.env.getOrElse("JMX_PORT", "8999")}",
+        "-Dcom.sun.management.jmxremote.authenticate=false",
+        "-Dcom.sun.management.jmxremote.ssl=false",
+        "-Dcom.sun.management.jmxremote.local.only=false",
+        "-Dcom.sun.management.jmxremote"
+      ),
+    javaOptions in Universal ++= Seq(
+        "-Dcom.sun.management.jmxremote",
+        "-Dcom.sun.management.jmxremote.local.only=true",
+        "-Dcom.sun.management.jmxremote.authenticate=false"
+      ),
     libraryDependencies ++= Seq(
-        "ch.qos.logback" % "logback-classic" % "1.2.3"
+        "com.github.scopt"     %% "scopt"                   % "4.0.0-RC2",
+        "net.logstash.logback" % "logstash-logback-encoder" % "4.11" excludeAll (
+          ExclusionRule(organization = "com.fasterxml.jackson.core", name = "jackson-core"),
+          ExclusionRule(organization = "com.fasterxml.jackson.core", name = "jackson-databind")
+        ),
+        "org.slf4j"           % "jul-to-slf4j"    % "1.7.26",
+        "ch.qos.logback"      % "logback-classic" % "1.2.3",
+        "org.codehaus.janino" % "janino"          % "3.0.6"
       )
   )
   .dependsOn(`interface-adaptor-command`, `interface-adaptor-query`, infrastructure)
