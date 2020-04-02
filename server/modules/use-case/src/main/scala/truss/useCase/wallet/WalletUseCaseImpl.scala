@@ -5,12 +5,12 @@ import akka.util.Timeout
 import truss.domain.money.Money
 import truss.domain.{ WalletId, WalletName }
 import truss.infrastructure.ulid.ULID
-import truss.interfaceAdaptor.aggregate.WalletAggregateFutureWrapper
+import truss.interfaceAdaptor.aggregate.WalletAggregatesFutureWrapper
 import truss.useCase.WalletUseCase
 
 import scala.concurrent.{ ExecutionContext, Future }
 
-class WalletUseCaseImpl(walletAggregateAsync: WalletAggregateFutureWrapper) extends WalletUseCase {
+class WalletUseCaseImpl(walletAggregateAsync: WalletAggregatesFutureWrapper) extends WalletUseCase {
 
   override def create(id: ULID, walletId: WalletId, name: WalletName, deposit: Money)(
       implicit timeout: Timeout,

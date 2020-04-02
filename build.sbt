@@ -36,7 +36,8 @@ val baseSettings =
         Resolver.bintrayRepo("segence", "maven-oss-releases"),
         Resolver.bintrayRepo("everpeace", "maven"),
         Resolver.bintrayRepo("tanukkii007", "maven"),
-        Resolver.bintrayRepo("kamon-io", "snapshots")
+        Resolver.bintrayRepo("kamon-io", "snapshots"),
+        "jitpack" at "https://jitpack.io"
       ),
     libraryDependencies ++= Seq(
         "org.scala-lang"     % "scala-reflect"         % scalaVersion.value,
@@ -267,6 +268,8 @@ val `api-server` = (project in file(s"$baseDir/bootstrap/api-server"))
         "-Dcom.sun.management.jmxremote.authenticate=false"
       ),
     libraryDependencies ++= Seq(
+//        "com.github.j5ik2o"    %% "healthchecks-core"       % "feature~scala-2.13-support-SNAPSHOT",
+//        "com.github.j5ik2o"    %% "healthchecks-k8s-probes" % "feature~scala-2.13-support-SNAPSHOT",
         "com.github.scopt"     %% "scopt"                   % "4.0.0-RC2",
         "net.logstash.logback" % "logstash-logback-encoder" % "4.11" excludeAll (
           ExclusionRule(organization = "com.fasterxml.jackson.core", name = "jackson-core"),

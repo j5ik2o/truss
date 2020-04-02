@@ -12,7 +12,7 @@ import truss.interfaceAdaptor.aggregate.WalletProtocol._
 
 import scala.concurrent.Future
 
-class WalletAggregatesFutureWrapperImpl(entityRef: ActorRef[WalletCommand]) extends WalletAggregateFutureWrapper {
+class WalletAggregatesFutureWrapperImpl(entityRef: ActorRef[WalletCommand]) extends WalletAggregatesFutureWrapper {
 
   override def create(id: ULID, walletId: WalletId, name: WalletName, deposit: Money)(
       implicit timeout: Timeout,
