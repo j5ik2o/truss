@@ -83,6 +83,19 @@ val ecrSettings = Seq(
 val baseDir = "server"
 // ---
 
+val `grpc-test` = (project in file("grpc-test"))
+  .enablePlugins(AkkaGrpcPlugin, JavaAgent)
+  .settings(baseSettings)
+  .settings(
+    name := "truss-grpc-test",
+    javaAgents += "org.mortbay.jetty.alpn" % "jetty-alpn-agent" % "2.0.7" % "runtime;test",
+    libraryDependencies ++= Seq(
+        "com.typesafe.akka" %% "akka-discovery"      % akkaVersion,
+        "com.typesafe.akka" %% "akka-stream-testkit" % akkaVersion % "test",
+        "org.scalatest"     %% "scalatest"           % "3.0.5" % "test"
+      )
+  )
+
 val `grpc-protocol` = (project in file("grpc-protocol"))
   .settings(baseSettings)
   .settings(name := "truss-grpc-protocol")
@@ -292,5 +305,6 @@ val root = (project in file("."))
     `interface-adaptor-query`,
     `use-case`,
     domain,
-    `grpc-protocol`
+    `grpc-protocol`,
+    `grpc-test`
   )

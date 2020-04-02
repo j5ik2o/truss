@@ -19,29 +19,28 @@ class WalletGRPCServiceImpl(useCase: WalletUseCase)(implicit system: ActorSystem
   implicit val ec: ExecutionContextExecutor = system.executionContext
 
   override def createWallet(in: CreateWalletRequest): Future[CreateWalletResponse] = {
-    Future.successful(CreateWalletResponse())
-//    useCase
-//      .create(
-//        ULID.parseFromString(in.id).get,
-//        WalletId(ULID.parseFromString(in.id).get),
-//        WalletName(in.name),
-//        Money(BigDecimal(in.depositAmount), Currency.getInstance(in.depositCurrency))
-//      )
-//      .map { _ =>
-//        CreateWalletResponse(
-//          id = in.id,
-//          walletId = in.walletId,
-//          createAt = in.createAt
-//        )
-//      }
-//      .recover {
-//        case ex =>
-//          CreateWalletResponse(
-//            id = in.id,
-//            walletId = in.walletId,
-//            errorMessage = ex.getMessage,
-//            createAt = in.createAt
-//          )
-//      }
+    useCase
+      .create(
+        ULID.parseFromString(in.id).get,
+        WalletId(ULID.parseFromString(in.id).get),
+        WalletName(in.name),
+        Money(BigDecimal(in.depositAmount), Currency.getInstance(in.depositCurrency))
+      )
+      .map { _ =>
+        CreateWalletResponse(
+          id = in.id,
+          walletId = in.walletId,
+          createAt = in.createAt
+        )
+      }
+      .recover {
+        case ex =>
+          CreateWalletResponse(
+            id = in.id,
+            walletId = in.walletId,
+            errorMessage = ex.getMessage,
+            createAt = in.createAt
+          )
+      }
   }
 }

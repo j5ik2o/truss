@@ -23,6 +23,6 @@ addSbtPlugin("io.spray" % "sbt-revolver" % "0.9.1")
 
 addSbtPlugin("com.thesamet" % "sbt-protoc" % "0.99.30")
 
-addSbtPlugin("com.lightbend.akka.grpc" % "sbt-akka-grpc" % "0.8.1")
+addSbtPlugin("com.lightbend.akka.grpc" % "sbt-akka-grpc" % "0.8.2")
 
 addSbtPlugin("com.mintbeans" % "sbt-ecr" % "0.14.1")

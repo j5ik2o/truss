@@ -7,7 +7,7 @@ import akka.grpc.GrpcClientSettings
 import akka.stream.ActorMaterializer
 import truss.domain.money.Money
 import truss.infrastructure.ulid.ULID
-import truss.interfaceAdaptor.grpc.proto.{ CreateWalletRequest, WalletGRPCService, WalletGRPCServiceClient }
+import truss.interfaceAdaptor.grpc.proto.{ CreateWalletRequest, WalletGRPCServiceClient }
 
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
@@ -17,7 +17,7 @@ object TestClient extends App {
   implicit val sys   = ActorSystem("HelloWorldClient")
   implicit val mat   = ActorMaterializer()
   implicit val ec    = sys.dispatcher
-  val clientSettings = GrpcClientSettings.fromConfig(WalletGRPCService.name)
+  val clientSettings = GrpcClientSettings.connectToServiceAt("127.0.0.1", 18080).withTls(false)
   val client         = WalletGRPCServiceClient(clientSettings)
 
   val id              = ULID().asString

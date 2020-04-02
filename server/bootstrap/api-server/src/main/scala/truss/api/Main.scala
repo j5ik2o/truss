@@ -23,6 +23,7 @@ import truss.useCase.wallet.WalletUseCaseImpl
 
 import scala.concurrent._
 import scala.concurrent.duration._
+import scala.sys.ShutdownHookThread
 
 object AppTypes extends Enumeration {
   type AppTypes = Value
@@ -35,11 +36,13 @@ class CommandLineParseException(args: Array[String])
     extends Exception(s"Failed to parse command line: args = [${args.mkString(",")}]")
 
 object Main extends App {
-  val logger                                              = LoggerFactory.getLogger(getClass)
-  val config: Config                                      = ConfigFactory.load()
+  val logger = LoggerFactory.getLogger(getClass)
+  val config: Config = ConfigFactory
+    .parseString("akka.http.server.preview.enable-http2 = on")
+    .withFallback(ConfigFactory.load())
   implicit val system: ActorSystem                        = ActorSystem("truss-api-server", config)
   implicit val executionContext: ExecutionContextExecutor = system.dispatcher
-  implicit val cluster                                    = Cluster(system)
+  implicit val cluster: Cluster                           = Cluster(system)
   logger.info(s"Started [$system], cluster.selfAddress = ${cluster.selfAddress}")
 
   AkkaManagement(system).start()
@@ -93,7 +96,7 @@ object Main extends App {
       .getOrElse(throw new CommandLineParseException(args))
   }
 
-  def registerShutdown(bindingFuture: Future[Http.ServerBinding]) = {
+  def registerShutdown(bindingFuture: Future[Http.ServerBinding]): ShutdownHookThread = {
     val terminateDuration = config.as[Duration]("truss.api-server.terminate.duration")
 
     sys.addShutdownHook {
@@ -112,12 +115,18 @@ object Main extends App {
     val host = config.as[String]("truss.api-server.grpc.host")
     val port = config.as[Int]("truss.api-server.grpc.port")
 
-    val bindingFuture: Future[Http.ServerBinding] = Http().bindAndHandleAsync(
-      services,
-      interface = host,
-      port,
-      connectionContext = HttpConnectionContext(UseHttp2.Always)
-    )
+    val bindingFuture: Future[Http.ServerBinding] = Http()
+      .bindAndHandleAsync(
+        services,
+        interface = host,
+        port,
+        connectionContext = HttpConnectionContext(UseHttp2.Always)
+      )
+      .map { v =>
+        logger.info(s"Started [$system], grpc = $host, $port")
+        v
+      }
+
     registerShutdown(bindingFuture)
   }
 
@@ -127,12 +136,18 @@ object Main extends App {
     val host = config.as[String]("truss.api-server.grpc-web.host")
     val port = config.as[Int]("truss.api-server.grpc-web.port")
 
-    val bindingFuture: Future[Http.ServerBinding] = Http().bindAndHandleAsync(
-      grpcWebHandler,
-      interface = host,
-      port,
-      connectionContext = HttpConnectionContext(UseHttp2.Always)
-    )
+    val bindingFuture: Future[Http.ServerBinding] = Http()
+      .bindAndHandleAsync(
+        grpcWebHandler,
+        interface = host,
+        port,
+        connectionContext = HttpConnectionContext(UseHttp2.Always)
+      )
+      .map { v =>
+        logger.info(s"Started [$system], grpc-web = $host, $port")
+        v
+      }
+
     registerShutdown(bindingFuture)
   }
 
