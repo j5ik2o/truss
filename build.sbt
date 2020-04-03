@@ -17,7 +17,7 @@ val baseSettings =
     organization := "truss",
     name := "truss",
     version := "1.0.0-SNAPSHOT",
-    scalaVersion := scala212Version,
+    scalaVersion := scala213Version,
     scalacOptions ++=
       Seq(
         "-feature",
@@ -105,26 +105,27 @@ val domain = (project in file(s"$baseDir/modules/domain"))
 
 val `contract-interface-adaptor-command` =
   (project in file(s"$baseDir/contracts/interface-adaptor-command"))
-  // .enablePlugins(AkkaGrpcPlugin)
+    .enablePlugins(AkkaGrpcPlugin)
     .settings(baseSettings)
     .settings(
       name := "truss-contract-interface-command",
       libraryDependencies ++= Seq(
           "com.typesafe.akka" %% "akka-actor-typed" % akkaVersion,
           "com.typesafe.akka" %% "akka-slf4j"       % akkaVersion,
-          "com.typesafe.akka" %% "akka-stream"      % akkaVersion,
-          "io.grpc"           % "grpc-all"          % grpcJavaVersion
+          "com.typesafe.akka" %% "akka-stream"      % akkaVersion
+//          "com.thesamet.scalapb" %% "compilerplugin"       % scalapbVersion,
+//          "com.thesamet.scalapb" %% "scalapb-runtime-grpc" % scalapbVersion,
+//          "io.grpc"              % "grpc-all"              % grpcJavaVersion
         ),
-      PB.protoSources in Compile += (baseDirectory in LocalRootProject).value / "protobuf" / "command",
-      PB.targets in Compile := Seq(
-          scalapb.gen() -> (sourceManaged in Compile).value
-        )
+      PB.protoSources in Compile += (baseDirectory in LocalRootProject).value / "protobuf" / "command"
+//      PB.targets in Compile := Seq( scalapb.gen() -> ((sourceManaged in Compile).value / "protobuf-scala")
+//        )
     )
     .dependsOn(domain)
 
 val `contract-interface-adaptor-query` =
   (project in file(s"$baseDir/contracts/interface-adaptor-query"))
-    .enablePlugins(AkkaGrpcPlugin)
+  //    .enablePlugins(AkkaGrpcPlugin)
     .settings(baseSettings)
     .settings(
       name := "truss-contract-interface-query",
@@ -292,8 +293,8 @@ val root = (project in file("."))
   .settings(baseSettings)
   .settings(name := "truss-root")
   .aggregate(
-    `api-server`,
-    `rest-server`,
+    //`api-server`,
+    //`rest-server`,
     infrastructure,
     `interface-adaptor-command`,
     `interface-adaptor-query`,

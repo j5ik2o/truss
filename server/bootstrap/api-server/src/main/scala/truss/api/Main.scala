@@ -5,7 +5,7 @@ import akka.actor.typed.ActorRef
 import akka.actor.typed.scaladsl.adapter._
 import akka.cluster.ClusterEvent.ClusterDomainEvent
 import akka.cluster.{ Cluster, ClusterEvent }
-import akka.grpc.scaladsl.{ ServiceHandler, WebHandler }
+import akka.grpc.scaladsl.{ ServerReflection, ServiceHandler, WebHandler }
 import akka.http.scaladsl.model.{ HttpRequest, HttpResponse }
 import akka.http.scaladsl.{ Http, HttpConnectionContext, UseHttp2 }
 import akka.management.cluster.bootstrap.ClusterBootstrap
@@ -110,7 +110,9 @@ object Main extends App {
   def startGRPC(): Unit = {
     val walletServiceHandler: PartialFunction[HttpRequest, Future[HttpResponse]] =
       WalletGRPCServiceHandler.partial(walletService)
-    val services: HttpRequest => Future[HttpResponse] = ServiceHandler.concatOrNotFound(walletServiceHandler)
+    val walletRefectionService = ServerReflection.partial(List(WalletGRPCService))
+    val services: HttpRequest => Future[HttpResponse] =
+      ServiceHandler.concatOrNotFound(walletServiceHandler, walletRefectionService)
 
     val host = config.as[String]("truss.api-server.grpc.host")
     val port = config.as[Int]("truss.api-server.grpc.port")
@@ -131,8 +133,9 @@ object Main extends App {
   }
 
   def startGRPCWeb(): Unit = {
-    val grpcWebHandler = WebHandler.grpcWebHandler(WalletGRPCServiceHandler.partial(walletService))
-
+    val walletRefectionService = ServerReflection.partial(List(WalletGRPCService))
+    val grpcWebHandler =
+      WebHandler.grpcWebHandler(WalletGRPCServiceHandler.partial(walletService), walletRefectionService)
     val host = config.as[String]("truss.api-server.grpc-web.host")
     val port = config.as[Int]("truss.api-server.grpc-web.port")
 

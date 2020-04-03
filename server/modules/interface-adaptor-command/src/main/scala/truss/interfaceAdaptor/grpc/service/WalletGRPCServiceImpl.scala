@@ -7,8 +7,16 @@ import akka.util.Timeout
 import truss.domain.money.Money
 import truss.domain.{ WalletId, WalletName }
 import truss.infrastructure.ulid.ULID
-import truss.interfaceAdaptor.grpc.proto.protobuf.WalletGRPCServiceGrpc.WalletGRPCService
-import truss.interfaceAdaptor.grpc.proto.protobuf._
+import truss.interfaceAdaptor.grpc.proto.{
+  CreateWalletRequest,
+  CreateWalletResponse,
+  Error,
+  GetWalletNameRequest,
+  GetWalletNameResponse,
+  RenameWalletRequest,
+  RenameWalletResponse,
+  WalletGRPCService
+}
 import truss.useCase.WalletUseCase
 
 import scala.concurrent.duration._
