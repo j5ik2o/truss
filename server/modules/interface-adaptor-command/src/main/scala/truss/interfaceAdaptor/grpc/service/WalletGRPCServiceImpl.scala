@@ -7,8 +7,8 @@ import akka.util.Timeout
 import truss.domain.money.Money
 import truss.domain.{ WalletId, WalletName }
 import truss.infrastructure.ulid.ULID
-import truss.interfaceAdaptor.grpc.proto.CreateWalletResponse.Body
-import truss.interfaceAdaptor.grpc.proto.{ CreateWalletRequest, CreateWalletResponse, Error, WalletGRPCService }
+import truss.interfaceAdaptor.grpc.proto.protobuf.WalletGRPCServiceGrpc.WalletGRPCService
+import truss.interfaceAdaptor.grpc.proto.protobuf._
 import truss.useCase.WalletUseCase
 
 import scala.concurrent.duration._
@@ -24,19 +24,20 @@ class WalletGRPCServiceImpl(useCase: WalletUseCase)(implicit system: ActorSystem
       .create(
         ULID.parseFromString(in.id).get,
         WalletId(ULID.parseFromString(in.id).get),
-        WalletName(in.name),
-        Money(BigDecimal(in.depositAmount), Currency.getInstance(in.depositCurrency))
+        WalletName(in.bodies(0).name),
+        Money(
+          BigDecimal(in.bodies(0).money.get.depositAmount),
+          Currency.getInstance(in.bodies(0).money.get.depositCurrency)
+        )
       )
       .map { _ =>
         CreateWalletResponse(
           id = ULID().asString,
           requestId = in.id,
-          body = Some(
-            Body(
-              in.walletId
-            )
+          walletIds = Seq(
+            in.bodies(0).walletId
           ),
-          createAt = in.createAt
+          createdAt = in.createAt
         )
       }
       .recover {
@@ -44,18 +45,20 @@ class WalletGRPCServiceImpl(useCase: WalletUseCase)(implicit system: ActorSystem
           CreateWalletResponse(
             id = ULID().asString,
             requestId = in.id,
-            body = Some(
-              Body(
-                in.walletId
-              )
+            walletIds = Seq(
+              in.bodies(0).walletId
             ),
-            error = Some(
+            errors = Seq(
               Error(
                 text = ex.getMessage
               )
             ),
-            createAt = in.createAt
+            createdAt = in.createAt
           )
       }
   }
+
+  override def renameWallet(in: RenameWalletRequest): Future[RenameWalletResponse] = ???
+
+  override def getWalletName(in: GetWalletNameRequest): Future[GetWalletNameResponse] = ???
 }

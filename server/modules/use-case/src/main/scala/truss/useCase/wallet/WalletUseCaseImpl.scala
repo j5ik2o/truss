@@ -16,9 +16,7 @@ class WalletUseCaseImpl(walletAggregateAsync: WalletAggregatesFutureWrapper) ext
       implicit timeout: Timeout,
       scheduler: Scheduler,
       ec: ExecutionContext
-  ): Future[Unit] = {
-    walletAggregateAsync.create(id, walletId, name, deposit).map(_ => ())
-  }
+  ): Future[Unit] = walletAggregateAsync.create(id, walletId, name, deposit).map(_ => ())
 
   override def rename(id: ULID, walletId: WalletId, name: WalletName)(
       implicit timeout: Timeout,

@@ -9,12 +9,15 @@ val kafkaVersion          = "2.4.0"
 val logbackVersion        = "1.2.3"
 val circeVersion          = "0.12.3"
 
+val scala213Version = "2.13.1"
+val scala212Version = "2.12.10"
+
 val baseSettings =
   Seq(
     organization := "truss",
     name := "truss",
     version := "1.0.0-SNAPSHOT",
-    scalaVersion := "2.13.1",
+    scalaVersion := scala212Version,
     scalacOptions ++=
       Seq(
         "-feature",
@@ -36,8 +39,7 @@ val baseSettings =
         Resolver.bintrayRepo("segence", "maven-oss-releases"),
         Resolver.bintrayRepo("everpeace", "maven"),
         Resolver.bintrayRepo("tanukkii007", "maven"),
-        Resolver.bintrayRepo("kamon-io", "snapshots"),
-        "jitpack" at "https://jitpack.io"
+        Resolver.bintrayRepo("kamon-io", "snapshots")
       ),
     libraryDependencies ++= Seq(
         "org.scala-lang"     % "scala-reflect"         % scalaVersion.value,
@@ -81,38 +83,8 @@ val ecrSettings = Seq(
 )
 
 val baseDir = "server"
+
 // ---
-
-val `grpc-test` = (project in file("grpc-test"))
-  .enablePlugins(AkkaGrpcPlugin, JavaAgent)
-  .settings(baseSettings)
-  .settings(
-    name := "truss-grpc-test",
-    javaAgents += "org.mortbay.jetty.alpn" % "jetty-alpn-agent" % "2.0.7" % "runtime;test",
-    libraryDependencies ++= Seq(
-        "com.typesafe.akka" %% "akka-discovery"      % akkaVersion,
-        "com.typesafe.akka" %% "akka-stream-testkit" % akkaVersion % "test",
-        "org.scalatest"     %% "scalatest"           % "3.0.5" % "test"
-      )
-  )
-
-val `grpc-protocol` = (project in file("grpc-protocol"))
-  .settings(baseSettings)
-  .settings(name := "truss-grpc-protocol")
-  .settings(
-    libraryDependencies ++= Seq(
-        ("io.grpc"             % "protoc-gen-grpc-java"  % "1.19.0") asProtocPlugin (),
-        "io.grpc"              % "grpc-netty"            % grpcJavaVersion,
-        "com.thesamet.scalapb" %% "scalapb-runtime"      % scalapbVersion % "compile,protobuf",
-        "com.thesamet.scalapb" %% "scalapb-runtime-grpc" % scalapbVersion,
-        "io.grpc"              % "grpc-all"              % grpcJavaVersion
-      ),
-    PB.targets in Compile := Seq(
-        PB.gens.java(protobufVersion) -> ((sourceManaged in Compile).value / "protobuf-java"),
-        scalapb.gen()                 -> ((sourceManaged in Compile).value / "protobuf-scala")
-      ),
-    PB.protoSources in Compile += (baseDirectory in LocalRootProject).value / "protobuf"
-  )
 
 val infrastructure =
   (project in file(s"$baseDir/modules/infrastructure"))
@@ -133,16 +105,20 @@ val domain = (project in file(s"$baseDir/modules/domain"))
 
 val `contract-interface-adaptor-command` =
   (project in file(s"$baseDir/contracts/interface-adaptor-command"))
-    .enablePlugins(AkkaGrpcPlugin)
+  // .enablePlugins(AkkaGrpcPlugin)
     .settings(baseSettings)
     .settings(
       name := "truss-contract-interface-command",
       libraryDependencies ++= Seq(
           "com.typesafe.akka" %% "akka-actor-typed" % akkaVersion,
           "com.typesafe.akka" %% "akka-slf4j"       % akkaVersion,
-          "com.typesafe.akka" %% "akka-stream"      % akkaVersion
+          "com.typesafe.akka" %% "akka-stream"      % akkaVersion,
+          "io.grpc"           % "grpc-all"          % grpcJavaVersion
         ),
-      PB.protoSources in Compile += (baseDirectory in LocalRootProject).value / "protobuf" / "command"
+      PB.protoSources in Compile += (baseDirectory in LocalRootProject).value / "protobuf" / "command",
+      PB.targets in Compile := Seq(
+          scalapb.gen() -> (sourceManaged in Compile).value
+        )
     )
     .dependsOn(domain)
 
@@ -253,6 +229,23 @@ val `interface-adaptor-command` =
 
 // ---- bootstrap
 
+val `rest-server` = (project in file(s"$baseDir/bootstrap/rest-server"))
+  .enablePlugins(AshScriptPlugin, JavaAgent, EcrPlugin)
+  .settings(baseSettings)
+  .settings(dockerCommonSettings)
+  .settings(ecrSettings)
+  .settings(
+    libraryDependencies ++= Seq(
+        "com.google.protobuf" % "protobuf-java"         % protobufVersion,
+        "com.github.j5ik2o"   %% "grpc-gateway-runtime" % "1.0.0" % "compile,protobuf"
+      ),
+    PB.targets in Compile := Seq(
+        // compile your proto files into scala source files
+        scalapb.gen() -> (sourceManaged in Compile).value
+      ),
+    PB.protoSources in Compile += (baseDirectory in LocalRootProject).value / "protobuf" / "query"
+  )
+
 val `api-server` = (project in file(s"$baseDir/bootstrap/api-server"))
   .enablePlugins(AshScriptPlugin, JavaAgent, EcrPlugin)
   .settings(baseSettings)
@@ -300,11 +293,10 @@ val root = (project in file("."))
   .settings(name := "truss-root")
   .aggregate(
     `api-server`,
+    `rest-server`,
     infrastructure,
     `interface-adaptor-command`,
     `interface-adaptor-query`,
     `use-case`,
-    domain,
-    `grpc-protocol`,
-    `grpc-test`
+    domain
   )

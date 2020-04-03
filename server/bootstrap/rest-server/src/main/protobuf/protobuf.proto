@@ -1,0 +1,44 @@
+syntax = "proto3";
+
+//import "google/api/annotations.proto";
+
+package truss.interfaceAdaptor.grpc.proto;
+
+// option optimize_for = SPEED;
+
+message Error {
+    string type = 1;
+    string code = 2;
+    string text = 3;
+}
+
+message CreateWalletRequest {
+    string id = 1;
+    string wallet_id = 2;
+    string name = 3;
+    string deposit_amount = 4;
+    string deposit_currency = 5;
+    int64 create_at = 6;
+}
+
+message CreateWalletResponse {
+    string id = 1;
+    string request_id = 2;
+    Body body = 3;
+    Error error = 4;
+    int64 create_at = 5;
+    message Body {
+        string wallet_id = 1;
+    }
+}
+
+
+
+service WalletGRPCService {
+    rpc CreateWallet (CreateWalletRequest) returns (CreateWalletResponse) {
+//        option (google.api.http) = {
+//            get: "/v1/example/feature"
+//        };
+    }
+}
+

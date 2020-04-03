@@ -10,6 +10,7 @@ import truss.domain.money.Money
 import truss.domain.{ WalletId, WalletName }
 import truss.infrastructure.ulid.ULID
 import truss.interfaceAdaptor.aggregate.WalletProtocol._
+import truss.interfaceAdaptor.aggregate.persistence.WalletPersistentAggregate
 import truss.interfaceAdaptor.utils.TypedActorSpecSupport
 
 abstract class WalletPersistentAggregateSpecBase(config: Config)
@@ -41,7 +42,7 @@ abstract class WalletPersistentAggregateSpecBase(config: Config)
       killActors(wallet1)
 
       val getBalanceResultProbe = createTestProbe[GetBalanceResult]()
-      val rebootWallet1         = spawn(WalletPersistentAggregate(walletId1))
+      val rebootWallet1         = spawn(persistence.WalletPersistentAggregate(walletId1))
       rebootWallet1 ! GetBalance(ULID(), walletId1, getBalanceResultProbe.ref)
       val getBalanceResult = getBalanceResultProbe.expectMessageType[GetBalanceResult]
       getBalanceResult.balance shouldBe Money.yens(400)

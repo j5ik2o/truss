@@ -6,7 +6,7 @@ import scala.concurrent.duration._
 
 trait TypedActorSpecSupport {
 
-  def killActor(actor: ActorRef[Nothing], max: FiniteDuration = 3 seconds)
+  def killActor(actor: ActorRef[Nothing], max: FiniteDuration = 3 seconds): Unit
 
   def killActors(actors: ActorRef[Nothing]*): Unit = {
     actors.foreach { actor =>
