@@ -7,7 +7,8 @@ import akka.util.Timeout
 import truss.domain.money.Money
 import truss.domain.{ WalletId, WalletName }
 import truss.infrastructure.ulid.ULID
-import truss.interfaceAdaptor.grpc.proto.{ CreateWalletRequest, CreateWalletResponse, WalletGRPCService }
+import truss.interfaceAdaptor.grpc.proto.CreateWalletResponse.Body
+import truss.interfaceAdaptor.grpc.proto.{ CreateWalletRequest, CreateWalletResponse, Error, WalletGRPCService }
 import truss.useCase.WalletUseCase
 
 import scala.concurrent.duration._
@@ -28,17 +29,31 @@ class WalletGRPCServiceImpl(useCase: WalletUseCase)(implicit system: ActorSystem
       )
       .map { _ =>
         CreateWalletResponse(
-          id = in.id,
-          walletId = in.walletId,
+          id = ULID().asString,
+          requestId = in.id,
+          body = Some(
+            Body(
+              in.walletId
+            )
+          ),
           createAt = in.createAt
         )
       }
       .recover {
         case ex =>
           CreateWalletResponse(
-            id = in.id,
-            walletId = in.walletId,
-            errorMessage = ex.getMessage,
+            id = ULID().asString,
+            requestId = in.id,
+            body = Some(
+              Body(
+                in.walletId
+              )
+            ),
+            error = Some(
+              Error(
+                text = ex.getMessage
+              )
+            ),
             createAt = in.createAt
           )
       }

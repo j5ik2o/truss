@@ -5,6 +5,7 @@ import akka.actor.typed.{ ActorRef, ActorSystem, Behavior }
 import akka.cluster.sharding.typed.ShardingEnvelope
 import akka.cluster.sharding.typed.scaladsl.{ ClusterSharding, Entity, EntityContext, EntityTypeKey }
 import truss.interfaceAdaptor.aggregate.WalletProtocol._
+import truss.interfaceAdaptor.aggregate.persistence.WalletPersistentAggregate
 
 import scala.concurrent.duration._
 

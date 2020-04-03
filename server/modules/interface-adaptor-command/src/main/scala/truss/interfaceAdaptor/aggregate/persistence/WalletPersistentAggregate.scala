@@ -1,4 +1,4 @@
-package truss.interfaceAdaptor.aggregate
+package truss.interfaceAdaptor.aggregate.persistence
 
 import java.time.Instant
 
@@ -10,7 +10,7 @@ import truss.domain.{ Wallet, WalletId, WalletName }
 import truss.infrastructure.ulid.ULID
 import truss.interfaceAdaptor.aggregate.WalletEvents._
 import truss.interfaceAdaptor.aggregate.WalletProtocol._
-import truss.interfaceAdaptor.aggregate.persistence.{ PersistFailureRestartWithBackoffSettings, SnapshotSettings }
+import truss.interfaceAdaptor.aggregate.persistence
 
 import scala.concurrent.duration._
 
