@@ -4,6 +4,7 @@ import akka.actor.{ ActorSystem, Props }
 import akka.actor.typed.ActorRef
 import akka.actor.typed.scaladsl.adapter._
 import akka.cluster.ClusterEvent.ClusterDomainEvent
+import akka.cluster.sharding.typed.scaladsl.ClusterSharding
 import akka.cluster.{ Cluster, ClusterEvent }
 import akka.grpc.scaladsl.{ ServerReflection, ServiceHandler, WebHandler }
 import akka.http.scaladsl.model.{ HttpRequest, HttpResponse }
@@ -16,6 +17,11 @@ import org.slf4j.LoggerFactory
 import scopt.{ OParser, Read }
 import truss.api.AppTypes.AppTypes
 import truss.interfaceAdaptor.aggregate._
+import truss.interfaceAdaptor.aggregate.persistence.{
+  PersistFailureSettings,
+  SnapshotSettings,
+  WalletPersistentAggregate
+}
 import truss.interfaceAdaptor.grpc.proto.{ WalletGRPCService, WalletGRPCServiceHandler }
 import truss.interfaceAdaptor.grpc.service.WalletGRPCServiceImpl
 import truss.useCase.WalletUseCase
@@ -54,7 +60,18 @@ object Main extends App {
     classOf[ClusterDomainEvent]
   )
 
-  val shardedWalletAggregates = new ShardedWalletAggregates(system.toTyped)
+  val sharding = ClusterSharding(system.toTyped)
+
+  val persistFailureRestartWithBackoffSettings: Option[PersistFailureSettings] = None
+  val snapshotSettings: Option[SnapshotSettings]                               = None
+
+  val behavior =
+    WalletAggregatesMessageBroker.behavior(_.value.asString, 3 seconds) { id =>
+      WalletPersistentAggregate.behavior(id, persistFailureRestartWithBackoffSettings, snapshotSettings)
+    }
+  val name = WalletAggregatesMessageBroker.name
+
+  val shardedWalletAggregates = new ShardedWalletAggregates(sharding)(behavior, name)
   shardedWalletAggregates.initShardRegion
 
   val proxyRef: ActorRef[WalletProtocol.WalletCommand] =
@@ -121,8 +138,8 @@ object Main extends App {
       .bindAndHandleAsync(
         services,
         interface = host,
-        port,
-        connectionContext = HttpConnectionContext(UseHttp2.Always)
+        port
+//        connectionContext = HttpConnectionContext(UseHttp2.Always)
       )
       .map { v =>
         logger.info(s"Started [$system], grpc = $host, $port")

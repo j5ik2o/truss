@@ -1,7 +1,7 @@
 package truss.interfaceAdaptor.aggregate
 
 import akka.actor.typed.scaladsl.Behaviors
-import akka.actor.typed.{ ActorRef, ActorSystem, Behavior }
+import akka.actor.typed.{ ActorRef, ActorSystem, Behavior, Props }
 import akka.cluster.sharding.typed.ShardingEnvelope
 import akka.cluster.sharding.typed.scaladsl.{ ClusterSharding, Entity, EntityContext, EntityTypeKey }
 import truss.interfaceAdaptor.aggregate.WalletProtocol._
@@ -15,34 +15,45 @@ object ShardedWalletAggregates {
 
 }
 
+/**
+  * The proxy to [[ShardedWalletAggregates]].
+  *
+  */
 object ShardedWalletAggregatesProxy {
 
-  def behavior(sharding: ClusterSharding): Behavior[WalletCommand] = Behaviors.setup { ctx =>
+  def behavior(sharding: ClusterSharding): Behavior[WalletCommand] =
     Behaviors.receiveMessage[WalletCommand] { msg =>
       val entityRef = sharding.entityRefFor[WalletCommand](ShardedWalletAggregates.TypeKey, msg.walletId.value.asString)
       entityRef ! msg
       Behaviors.same
     }
-  }
 
 }
 
-class ShardedWalletAggregates(system: ActorSystem[_], receiveTimeout: FiniteDuration = 3 seconds) {
+/**
+  *
+  *
+  * @param sharding
+  * @param receiveTimeout
+  */
+class ShardedWalletAggregates(val sharding: ClusterSharding, receiveTimeout: FiniteDuration = 3 seconds)(
+    behavior: Behavior[WalletCommand],
+    name: String
+) {
 
   private def behavior(
       receiveTimeout: FiniteDuration
   ): EntityContext[WalletCommand] => Behavior[WalletCommand] = { entityContext =>
     Behaviors.setup[WalletCommand] { ctx =>
-      val childRef = ctx.spawn(
-        WalletAggregates.behavior(_.value.asString)(id => WalletPersistentAggregate(id)),
-        name = WalletAggregates.name
-      )
+      val childRef = ctx.spawn(behavior, name)
       ctx.setReceiveTimeout(receiveTimeout, Idle)
       Behaviors.receiveMessagePartial {
         case Idle =>
+          ctx.log.debug("Changed state: Idle")
           entityContext.shard ! ClusterSharding.Passivate(ctx.self)
           Behaviors.same
         case Stop =>
+          ctx.log.debug("Changed state: Stop")
           Behaviors.stopped
         case msg =>
           childRef ! msg
@@ -50,8 +61,6 @@ class ShardedWalletAggregates(system: ActorSystem[_], receiveTimeout: FiniteDura
       }
     }
   }
-
-  val sharding = ClusterSharding(system)
 
   def initShardRegion: ActorRef[ShardingEnvelope[WalletCommand]] = sharding.init(
     Entity(typeKey = ShardedWalletAggregates.TypeKey)(createBehavior = behavior(receiveTimeout))

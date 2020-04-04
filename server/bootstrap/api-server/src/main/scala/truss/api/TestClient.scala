@@ -17,7 +17,6 @@ import scala.concurrent.duration.Duration
 object TestClient extends App {
 
   implicit val sys   = ActorSystem("HelloWorldClient")
-  implicit val mat   = ActorMaterializer()
   implicit val ec    = sys.dispatcher
   val clientSettings = GrpcClientSettings.connectToServiceAt("127.0.0.1", 18080).withTls(false)
   val client         = WalletGRPCServiceClient(clientSettings)

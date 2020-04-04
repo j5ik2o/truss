@@ -25,6 +25,7 @@ import truss.interfaceAdaptor.aggregate.WalletProtocol.{
   Stop,
   WalletCommand
 }
+import truss.interfaceAdaptor.aggregate.persistence.WalletPersistentAggregate
 import truss.interfaceAdaptor.utils.TypedActorSpecSupport
 
 import scala.concurrent.duration._
@@ -66,7 +67,13 @@ class ShardedWalletAggregatesSpec
       implicit val to  = Timeout(3 seconds)
       implicit val sch = system.scheduler.toTyped
 
-      val shardedWalletAggregates = new ShardedWalletAggregates(typedSystem)
+      val behavior =
+        WalletAggregatesMessageBroker.behavior(_.value.asString, 3 seconds)(id =>
+          WalletPersistentAggregate.behavior(id)
+        )
+      val name                    = WalletAggregatesMessageBroker.name
+      val shardedWalletAggregates = new ShardedWalletAggregates(clusterSharding)(behavior, name)
+      // initialize ShardRegion
       shardedWalletAggregates.initShardRegion
 
       val proxyRef = system.spawn(ShardedWalletAggregatesProxy.behavior(clusterSharding), "proxy")
@@ -78,9 +85,9 @@ class ShardedWalletAggregatesSpec
         async.create(ULID(), walletId, WalletName("test-1"), Money.yens(100)).futureValue
 
       createResult match {
-        case CreateWalletSucceeded(_, _walletId, creatAt) =>
+        case CreateWalletSucceeded(_, _walletId, _) =>
           walletId shouldBe _walletId
-        case CreateWalletFailed(id, walletId, message, creatAt) =>
+        case CreateWalletFailed(_, _, _, _) =>
           assert(false)
       }
 

@@ -2,7 +2,7 @@ package truss.interfaceAdaptor.aggregate.persistence
 
 import java.time.Instant
 
-import akka.actor.typed.{ ActorRef, Behavior, SupervisorStrategy }
+import akka.actor.typed.{ ActorRef, BackoffSupervisorStrategy, Behavior, SupervisorStrategy }
 import akka.persistence.typed.PersistenceId
 import akka.persistence.typed.scaladsl.{ Effect, EventSourcedBehavior, ReplyEffect, RetentionCriteria }
 import truss.domain.money.Money
@@ -14,19 +14,23 @@ import truss.interfaceAdaptor.aggregate.persistence
 
 import scala.concurrent.duration._
 
+/**
+  * Wallet Aggregate.
+  *
+  * For example, deposits and withdrawals are made after the Wallet created.
+  */
 object WalletPersistentAggregate {
 
   sealed trait State
   final case class JustState(value: Wallet) extends State
   final case object EmptyState              extends State
 
-  def apply(
+  def behavior(
       id: WalletId,
-      persistFailureRestartWithBackoffSettings: PersistFailureRestartWithBackoffSettings = persistence
-        .PersistFailureRestartWithBackoffSettings(minBackoff = 200 millis, maxBackoff = 5 seconds, randomFactor = 0.1),
-      snapshotSettings: Option[SnapshotSettings] = Some(SnapshotSettings(numberOfEvents = 5, keepNSnapshots = 2))
+      persistFailureSettings: Option[PersistFailureSettings] = None,
+      snapshotSettings: Option[SnapshotSettings] = None
   ): Behavior[WalletCommand] = {
-    EventSourcedBehavior[WalletCommand, Event, State](
+    val eventSourcedBehavior = EventSourcedBehavior[WalletCommand, Event, State](
       persistenceId = PersistenceId.of(id.modelName, id.value.asString, "-"),
       emptyState = EmptyState,
       commandHandler = commandHandler(id),
@@ -40,13 +44,16 @@ object WalletPersistentAggregate {
           )
         )
       )
-      .onPersistFailure(
-        SupervisorStrategy.restartWithBackoff(
-          persistFailureRestartWithBackoffSettings.minBackoff,
-          persistFailureRestartWithBackoffSettings.maxBackoff,
-          persistFailureRestartWithBackoffSettings.randomFactor
+    persistFailureSettings
+      .fold(eventSourcedBehavior) { backoffSettings =>
+        eventSourcedBehavior.onPersistFailure(
+          SupervisorStrategy.restartWithBackoff(
+            backoffSettings.minBackoff,
+            backoffSettings.maxBackoff,
+            backoffSettings.randomFactor
+          )
         )
-      )
+      }
   }
 
   private def commandHandler(id: WalletId): (State, WalletCommand) => Effect[Event, State] = { (state, command) =>

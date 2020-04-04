@@ -20,7 +20,7 @@ class WalletPersistentAggregateInMemorySpec extends ScalaTestWithActorTestKit(s"
 
     "rename" in {
       val walletId1               = WalletId(ULID())
-      val wallet1                 = spawn(WalletPersistentAggregate(walletId1))
+      val wallet1                 = spawn(WalletPersistentAggregate.behavior(walletId1))
       val now                     = Instant.now()
       val createWalletResultProbe = createTestProbe[CreateWalletResult]()
       wallet1 ! CreateWallet(ULID(), walletId1, WalletName("test-1"), Money.yens(100), now, createWalletResultProbe.ref)
@@ -45,7 +45,7 @@ class WalletPersistentAggregateInMemorySpec extends ScalaTestWithActorTestKit(s"
 
     "deposit" in {
       val walletId1               = WalletId(ULID())
-      val wallet1                 = spawn(persistence.WalletPersistentAggregate(walletId1))
+      val wallet1                 = spawn(persistence.WalletPersistentAggregate.behavior(walletId1))
       val now                     = Instant.now()
       val createWalletResultProbe = createTestProbe[CreateWalletResult]()
       wallet1 ! CreateWallet(ULID(), walletId1, WalletName("test-1"), Money.yens(100), now, createWalletResultProbe.ref)
@@ -72,7 +72,7 @@ class WalletPersistentAggregateInMemorySpec extends ScalaTestWithActorTestKit(s"
 
     "withdraw" in {
       val walletId1               = WalletId(ULID())
-      val wallet1                 = spawn(persistence.WalletPersistentAggregate(walletId1))
+      val wallet1                 = spawn(persistence.WalletPersistentAggregate.behavior(walletId1))
       val now                     = Instant.now()
       val createWalletResultProbe = createTestProbe[CreateWalletResult]()
       wallet1 ! CreateWallet(ULID(), walletId1, WalletName("test-1"), Money.yens(100), now, createWalletResultProbe.ref)
