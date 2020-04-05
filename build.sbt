@@ -1,13 +1,6 @@
+import Dependencies._
 import com.amazonaws.regions.{ Region, Regions }
 import scalapb.compiler.Version.{ grpcJavaVersion, protobufVersion, scalapbVersion }
-
-val akkaVersion           = "2.6.4"
-val alpakkaKafkaVersion   = "2.0.2+4-30f1536b"
-val akkaManagementVersion = "1.0.6"
-val AkkaHttpVersion       = "10.1.11"
-val kafkaVersion          = "2.4.0"
-val logbackVersion        = "1.2.3"
-val circeVersion          = "0.12.3"
 
 val scala213Version = "2.13.1"
 val scala212Version = "2.12.10"
@@ -28,6 +21,12 @@ val baseSettings =
         "-language:_",
         "-target:jvm-1.8"
       ),
+    scalacOptions ++= {
+      CrossVersion.partialVersion(scalaVersion.value) match {
+        case Some((2, n)) if n >= 13 => "-Ymacro-annotations" :: Nil
+        case _                       => "-Ypartial-unification" :: Nil
+      }
+    },
     resolvers ++= Seq(
         "Sonatype OSS Snapshot Repository" at "https://oss.sonatype.org/content/repositories/snapshots/",
         "Sonatype OSS Release Repository" at "https://oss.sonatype.org/content/repositories/releases/",
@@ -37,21 +36,28 @@ val baseSettings =
         "DynamoDB Local Repository" at "https://s3-ap-northeast-1.amazonaws.com/dynamodb-local-tokyo/release",
         Resolver.bintrayRepo("beyondthelines", "maven"),
         Resolver.bintrayRepo("segence", "maven-oss-releases"),
-        Resolver.bintrayRepo("everpeace", "maven"),
+        // Resolver.bintrayRepo("everpeace", "maven"),
         Resolver.bintrayRepo("tanukkii007", "maven"),
         Resolver.bintrayRepo("kamon-io", "snapshots")
       ),
     libraryDependencies ++= Seq(
-        "org.scala-lang"     % "scala-reflect"         % scalaVersion.value,
-        "com.iheart"         %% "ficus"                % "1.4.7",
-        "org.slf4j"          % "slf4j-api"             % "1.7.30",
-        "de.huxhorn.sulky"   % "de.huxhorn.sulky.ulid" % "8.2.0",
-        "io.monix"           %% "monix"                % "3.1.0",
-        "eu.timepit"         %% "refined"              % "0.9.13",
-        "org.wvlet.airframe" %% "airframe"             % "20.3.3",
-        "org.scalatest"      %% "scalatest"            % "3.1.1" % Test,
-        "org.scalacheck"     %% "scalacheck"           % "1.14.3" % Test
+        scalaLang.scalaReflect(scalaVersion.value),
+        iheart.ficus,
+        slf4j.api,
+        sulky.ulid,
+        monix.monix,
+        timepit.refined,
+        airframe.airframe,
+        scalatest.scalatest   % Test,
+        scalacheck.scalacheck % Test
       ),
+    libraryDependencies ++= {
+      CrossVersion.partialVersion(scalaVersion.value) match {
+        case Some((2, n)) if n >= 13 => Nil
+        case _ =>
+          compilerPlugin("org.scalamacros" % "paradise" % "2.1.1" cross CrossVersion.full) :: Nil
+      }
+    },
     dependencyOverrides ++= Seq(
         "com.typesafe.akka" %% "akka-http"            % "10.1.11",
         "com.typesafe.akka" %% "akka-http-spray-json" % "10.1.11"
@@ -85,6 +91,14 @@ val ecrSettings = Seq(
 val baseDir = "server"
 
 // ---
+lazy val `healthchecks-core` = project
+  .in(file("healthchecks/core"))
+  .settings(baseSettings)
+
+lazy val `healthchecks-k8s-probes` = project
+  .in(file("healthchecks/k8s-probes"))
+  .settings(baseSettings)
+  .dependsOn(`healthchecks-core` % "test->test;compile->compile")
 
 val infrastructure =
   (project in file(s"$baseDir/modules/infrastructure"))
@@ -92,7 +106,7 @@ val infrastructure =
     .settings(
       name := "truss-infrastructure",
       libraryDependencies ++= Seq(
-          "ch.qos.logback" % "logback-classic" % logbackVersion % Test
+          logback.classic % Test
         )
     )
 
@@ -110,16 +124,11 @@ val `contract-interface-adaptor-command` =
     .settings(
       name := "truss-contract-interface-command",
       libraryDependencies ++= Seq(
-          "com.typesafe.akka" %% "akka-actor-typed" % akkaVersion,
-          "com.typesafe.akka" %% "akka-slf4j"       % akkaVersion,
-          "com.typesafe.akka" %% "akka-stream"      % akkaVersion
-//          "com.thesamet.scalapb" %% "compilerplugin"       % scalapbVersion,
-//          "com.thesamet.scalapb" %% "scalapb-runtime-grpc" % scalapbVersion,
-//          "io.grpc"              % "grpc-all"              % grpcJavaVersion
+          akka.actorTyped,
+          akka.slf4j,
+          akka.stream
         ),
       PB.protoSources in Compile += (baseDirectory in LocalRootProject).value / "protobuf" / "command"
-//      PB.targets in Compile := Seq( scalapb.gen() -> ((sourceManaged in Compile).value / "protobuf-scala")
-//        )
     )
     .dependsOn(domain)
 
@@ -130,8 +139,8 @@ val `contract-interface-adaptor-query` =
     .settings(
       name := "truss-contract-interface-query",
       libraryDependencies ++= Seq(
-          "com.typesafe.akka" %% "akka-slf4j"  % akkaVersion,
-          "com.typesafe.akka" %% "akka-stream" % akkaVersion
+          akka.slf4j,
+          akka.stream
         ),
       PB.protoSources in Compile += (baseDirectory in LocalRootProject).value / "protobuf" / "query"
     )
@@ -142,8 +151,8 @@ val `contract-use-case` =
     .settings(
       name := "truss-contract-use-case",
       libraryDependencies ++= Seq(
-          "com.typesafe.akka" %% "akka-stream"      % akkaVersion,
-          "com.typesafe.akka" %% "akka-actor-typed" % akkaVersion
+          akka.actorTyped,
+          akka.stream
         )
     )
     .dependsOn(domain)
@@ -156,10 +165,10 @@ val `use-case` =
     .settings(
       name := "truss-use-case",
       libraryDependencies ++= Seq(
-          "com.typesafe.akka" %% "akka-actor-typed"    % akkaVersion,
-          "ch.qos.logback"    % "logback-classic"      % logbackVersion % Test,
-          "com.typesafe.akka" %% "akka-testkit"        % akkaVersion % Test,
-          "com.typesafe.akka" %% "akka-stream-testkit" % akkaVersion % Test
+          akka.actorTyped,
+          logback.classic    % Test,
+          akka.testKitTyped  % Test,
+          akka.streamTestKit % Test
         )
     )
     .dependsOn(`contract-use-case`, `contract-interface-adaptor-command`, infrastructure, domain)
@@ -169,15 +178,14 @@ val `interface-adaptor-common` = (project in file(s"$baseDir/modules/interface-a
   .settings(
     name := "truss-interface-adaptor-common",
     libraryDependencies ++= Seq(
-        "io.circe"             %% "circe-core"      % circeVersion,
-        "io.circe"             %% "circe-generic"   % circeVersion,
-        "io.circe"             %% "circe-parser"    % circeVersion,
-        "com.typesafe.akka"    %% "akka-http"       % "10.1.11",
-        "de.heikoseeberger"    %% "akka-http-circe" % "1.31.0",
-        "com.thesamet.scalapb" %% "scalapb-runtime" % scalapbVersion,
-        "com.thesamet.scalapb" %% "scalapb-runtime" % scalapbVersion % "protobuf"
+        circe.core,
+        circe.generic,
+        circe.parser,
+        akka.http,
+        heikoseeberger.akkaHttpCirce
       )
   )
+  .dependsOn(`healthchecks-k8s-probes`)
 
 val `interface-adaptor-query` =
   (project in file(s"$baseDir/modules/interface-adaptor-query"))
@@ -185,8 +193,8 @@ val `interface-adaptor-query` =
     .settings(
       name := "truss-interface-adaptor-query",
       libraryDependencies ++= Seq(
-          "com.github.ghostdogpr" %% "caliban"           % "0.7.3",
-          "com.github.ghostdogpr" %% "caliban-akka-http" % "0.7.3"
+          ghostdogpr.caliban,
+          ghostdogpr.calibanAkkaHttp
         )
     )
     .dependsOn(`contract-interface-adaptor-query`, `interface-adaptor-common`, infrastructure)
@@ -197,33 +205,33 @@ val `interface-adaptor-command` =
     .settings(
       name := "truss-interface-adaptor-command",
       libraryDependencies ++= Seq(
-          "com.typesafe.akka"             %% "akka-stream-kafka"                  % alpakkaKafkaVersion,
-          "com.typesafe.akka"             %% "akka-stream-kafka-cluster-sharding" % alpakkaKafkaVersion,
-          "com.typesafe.akka"             %% "akka-discovery"                     % akkaVersion,
-          "com.typesafe.akka"             %% "akka-actor-typed"                   % akkaVersion,
-          "com.typesafe.akka"             %% "akka-cluster-typed"                 % akkaVersion,
-          "com.typesafe.akka"             %% "akka-cluster-sharding-typed"        % akkaVersion,
-          "com.typesafe.akka"             %% "akka-persistence-typed"             % akkaVersion,
-          "com.typesafe.akka"             %% "akka-serialization-jackson"         % akkaVersion,
-          "ch.megard"                     %% "akka-http-cors"                     % "0.4.2",
-          "com.github.j5ik2o"             %% "akka-persistence-dynamodb"          % "1.0.21",
-          "com.github.j5ik2o"             %% "akka-persistence-kafka"             % "1.0.6",
-          "com.github.j5ik2o"             %% "akka-persistence-s3"                % "1.0.4",
-          "com.lightbend.akka.management" %% "akka-management"                    % akkaManagementVersion,
-          "com.lightbend.akka.management" %% "akka-management-cluster-http"       % akkaManagementVersion,
-          "com.lightbend.akka.management" %% "akka-management-cluster-bootstrap"  % akkaManagementVersion,
-          "com.lightbend.akka.discovery"  %% "akka-discovery-kubernetes-api"      % akkaManagementVersion,
-          "com.github.j5ik2o"             %% "reactive-aws-dynamodb-test"         % "1.2.1" % Test,
-          "com.typesafe.akka"             %% "akka-multi-node-testkit"            % akkaVersion % Test,
-          "ch.qos.logback"                % "logback-classic"                     % logbackVersion % Test,
-          "com.typesafe.akka"             %% "akka-testkit"                       % akkaVersion % Test,
-          "com.typesafe.akka"             %% "akka-actor-testkit-typed"           % akkaVersion % Test,
-          "com.typesafe.akka"             %% "akka-stream-testkit"                % akkaVersion % Test,
-          "io.github.embeddedkafka"       %% "embedded-kafka"                     % kafkaVersion % Test,
-          "com.whisk"                     %% "docker-testkit-scalatest"           % "0.9.9" % Test,
-          "com.whisk"                     %% "docker-testkit-impl-spotify"        % "0.9.9" % Test,
-          "org.slf4j"                     % "jul-to-slf4j"                        % "1.7.30" % Test,
-          "org.aspectj"                   % "aspectjweaver"                       % "1.8.13"
+          akka.streamKafka,
+          akka.streamKafkaClusterSharding,
+          akka.discovery,
+          akka.actorTyped,
+          akka.clusterTyped,
+          akka.clusterShardingTyped,
+          akka.persistenceTyped,
+          akka.serializationJackson,
+          megard.akkaHttpCors,
+          j5ik2o.akkaPersistenceDynamodb,
+          j5ik2o.akkaPersistenceKafka,
+          j5ik2o.akkaPersistenceS3,
+          akkaManagement.akkaManagement,
+          akkaManagement.clusterHttp,
+          akkaManagement.clusterBootstrap,
+          akkaManagement.k8sApi,
+          aspectj.aspectjweaver,
+          j5ik2o.reactiveAwsDynamodbTest % Test,
+          logback.classic                % Test,
+          akka.testKit                   % Test,
+          akka.testKitTyped              % Test,
+          akka.streamTestKit             % Test,
+          akka.multiNodeTestKit          % Test,
+          embeddedkafka.embeddedKafka    % Test,
+          whisk.dockerTestkitScalaTest   % Test,
+          whisk.dockerTestkitImplSpotify % Test,
+          slf4j.julToSlf4j               % Test
         )
     )
     .dependsOn(`contract-interface-adaptor-command`, `interface-adaptor-common`, infrastructure, `use-case`)
@@ -237,8 +245,7 @@ val `rest-server` = (project in file(s"$baseDir/bootstrap/rest-server"))
   .settings(ecrSettings)
   .settings(
     libraryDependencies ++= Seq(
-        "com.google.protobuf" % "protobuf-java"         % protobufVersion,
-        "com.github.j5ik2o"   %% "grpc-gateway-runtime" % "1.0.0" % "compile,protobuf"
+        "com.google.protobuf" % "protobuf-java" % protobufVersion
       ),
     PB.targets in Compile := Seq(
         // compile your proto files into scala source files
@@ -275,16 +282,11 @@ val `api-server` = (project in file(s"$baseDir/bootstrap/api-server"))
         "-Dcom.sun.management.jmxremote.authenticate=false"
       ),
     libraryDependencies ++= Seq(
-//        "com.github.j5ik2o"    %% "healthchecks-core"       % "feature~scala-2.13-support-SNAPSHOT",
-//        "com.github.j5ik2o"    %% "healthchecks-k8s-probes" % "feature~scala-2.13-support-SNAPSHOT",
-        "com.github.scopt"     %% "scopt"                   % "4.0.0-RC2",
-        "net.logstash.logback" % "logstash-logback-encoder" % "4.11" excludeAll (
-          ExclusionRule(organization = "com.fasterxml.jackson.core", name = "jackson-core"),
-          ExclusionRule(organization = "com.fasterxml.jackson.core", name = "jackson-databind")
-        ),
-        "org.slf4j"           % "jul-to-slf4j"    % "1.7.26",
-        "ch.qos.logback"      % "logback-classic" % "1.2.3",
-        "org.codehaus.janino" % "janino"          % "3.0.6"
+        scopt.scopt,
+        logback.logstashLogbackEncoder,
+        slf4j.julToSlf4j,
+        logback.classic,
+        jaino.jaino
       )
   )
   .dependsOn(`interface-adaptor-command`, `interface-adaptor-query`, infrastructure)

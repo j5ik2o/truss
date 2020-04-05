@@ -36,10 +36,11 @@ object ShardedWalletAggregatesProxy {
   * @param sharding
   * @param receiveTimeout
   */
-class ShardedWalletAggregates(val sharding: ClusterSharding, receiveTimeout: FiniteDuration = 3 seconds)(
+class ShardedWalletAggregates(
     behavior: Behavior[WalletCommand],
-    name: String
-) {
+    name: String,
+    receiveTimeout: FiniteDuration = 3 seconds
+)(implicit val sharding: ClusterSharding) {
 
   private def behavior(
       receiveTimeout: FiniteDuration

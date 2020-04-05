@@ -52,9 +52,9 @@ class ShardedWalletAggregatesSpec
     with LogCapturing
     with ScalaFutures
     with TypedActorSpecSupport {
-  def typedSystem: typed.ActorSystem[Nothing] = system.toTyped
-  val cluster: Cluster                        = Cluster(typedSystem)
-  val clusterSharding: ClusterSharding        = ClusterSharding(typedSystem)
+  def typedSystem: typed.ActorSystem[Nothing]   = system.toTyped
+  val cluster: Cluster                          = Cluster(typedSystem)
+  implicit val clusterSharding: ClusterSharding = ClusterSharding(typedSystem)
 
   implicit val pc = PatienceConfig(Span(30, Seconds), Span(1, Second))
 
@@ -72,7 +72,7 @@ class ShardedWalletAggregatesSpec
           WalletPersistentAggregate.behavior(id)
         )
       val name                    = WalletAggregatesMessageBroker.name
-      val shardedWalletAggregates = new ShardedWalletAggregates(clusterSharding)(behavior, name)
+      val shardedWalletAggregates = new ShardedWalletAggregates(behavior, name)
       // initialize ShardRegion
       shardedWalletAggregates.initShardRegion
 
